@@ -64,7 +64,7 @@ const Blogmanage = () => {
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}blog/get-all`);
+      const response = await axios.get(`${API_URL}api/blog/get-all`);
       if (response.data.success) {
         setBlogs(response.data.data || []);
         setTotalPages(Math.ceil((response.data.data?.length || 0) / 8));
@@ -250,7 +250,7 @@ const Blogmanage = () => {
       if (editingBlog) {
         // -------- UPDATE BLOG --------
         response = await axios.put(
-          `${API_URL}blog/update/${editingBlog._id}`,
+          `${API_URL}api/blog/update/${editingBlog._id}`,
           formDataToSend,
           {
             headers: {
@@ -269,7 +269,7 @@ const Blogmanage = () => {
       } else {
         // -------- CREATE BLOG --------
         response = await axios.post(
-          `${API_URL}blog/create_blog`,
+          `${API_URL}api/blog/create`,
           formDataToSend,
           {
             headers: {
@@ -327,7 +327,7 @@ const Blogmanage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this blog?')) {
       try {
-        await axios.post(`${API_URL}blog/delete/${id}`);
+        await axios.delete(`${API_URL}api/blog/delete/${id}`);
         showSnackbar('Blog deleted successfully', 'success');
         fetchBlogs();
       } catch (error) {

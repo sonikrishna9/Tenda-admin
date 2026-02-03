@@ -10,6 +10,7 @@ import { Toaster } from "react-hot-toast";
 import AddProduct from "./Component/AddProducts"
 import ParentCategoryui from "./Component/ParentCategoryui"
 import Blogmanage from "./Component/Blogs/Blogmanage"
+import Slidermanagement from "./Component/Slidermanagement"
 
 
 export default function App() {
@@ -25,11 +26,12 @@ export default function App() {
           <div className="flex-1 p-6 bg-gray-100">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/parent-category" element={<ParentCategoryui/>} />
+              <Route path="/parent-category" element={<ParentCategoryui />} />
               <Route path="/products" element={<ProductTable />} />
               <Route path="/products/add" element={<AddProduct />} />
               <Route path="/products/update" element={<UpdateProduct />} />
-              <Route path="/blogs" element={<Blogmanage/>} />
+              <Route path="/blogs" element={<Blogmanage />} />
+              <Route path="/slider-management" element={<Slidermanagement />} />
             </Routes>
           </div>
         </div>

@@ -23,6 +23,7 @@ const menu = [
       { label: "All Products", path: "/products" },
       { label: "Category Product", path: "/parent-category" },
       { label: "Blogs", path: "/blogs" },
+      { label: "Slider", path: "/slider-management" },
     ],
   },
 ];

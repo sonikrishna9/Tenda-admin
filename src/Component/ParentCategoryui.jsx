@@ -37,7 +37,7 @@ const ParentCategoryui = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}parentcategory/getall`);
+      const response = await axios.get(`${API_URL}api/parentcategory/getall`);
       if (response.data.success) {
         setCategories(response.data.parentcategory);
         setTotalPages(Math.ceil(response.data.parentcategory.length / 6));
@@ -113,7 +113,7 @@ const ParentCategoryui = () => {
 
       if (editingCategory) {
         // Update category
-        await axios.put(`${API_URL}parentcategory/update/${editingCategory._id}`, formDataToSend, {
+        await axios.put(`${API_URL}api/parentcategory/update/${editingCategory._id}`, formDataToSend, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -125,7 +125,7 @@ const ParentCategoryui = () => {
         showSnackbar('Category updated successfully', 'success');
       } else {
         // Create new category
-        await axios.post(`${API_URL}parentcategory/create`, formDataToSend, {
+        await axios.post(`${API_URL}api/parentcategory/create`, formDataToSend, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -161,7 +161,7 @@ const ParentCategoryui = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
-        await axios.delete(`${API_URL}parentcategory/${id}`);
+        await axios.delete(`${API_URL}api/parentcategory/${id}`);
         showSnackbar('Category deleted successfully', 'success');
         fetchCategories();
       } catch (error) {
@@ -174,7 +174,7 @@ const ParentCategoryui = () => {
   // Toggle category status
   const toggleStatus = async (category) => {
     try {
-      await axios.put(`${API_URL}parentcategory/${category._id}/toggle-status`, {
+      await axios.put(`${API_URL}api/parentcategory/${category._id}/toggle-status`, {
         status: !category.status
       });
       showSnackbar('Status updated successfully', 'success');
