@@ -11,6 +11,8 @@ import AddProduct from "./Component/AddProducts"
 import ParentCategoryui from "./Component/ParentCategoryui"
 import Blogmanage from "./Component/Blogs/Blogmanage"
 import Slidermanagement from "./Component/Slidermanagement"
+import SubcategoryBanner from "./Component/SubcategoryBanner"
+import SubcategoryBannerTable from "./Component/SubcategoryBannerTable"
 
 
 export default function App() {
@@ -32,6 +34,8 @@ export default function App() {
               <Route path="/products/update" element={<UpdateProduct />} />
               <Route path="/blogs" element={<Blogmanage />} />
               <Route path="/slider-management" element={<Slidermanagement />} />
+              <Route path="/subcategorybanner" element={<SubcategoryBanner />} />
+              <Route path="/subcategorybannertable" element={<SubcategoryBannerTable />} />
             </Routes>
           </div>
         </div>
