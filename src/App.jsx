@@ -13,6 +13,8 @@ import Blogmanage from "./Component/Blogs/Blogmanage"
 import Slidermanagement from "./Component/Slidermanagement"
 import SubcategoryBanner from "./Component/SubcategoryBanner"
 import SubcategoryBannerTable from "./Component/SubcategoryBannerTable"
+import ParentCategoryBanner from "./Component/ParentCategoryBanner"
+import ParentCategoryBannerTable from "./Component/ParentCategoryBannerTable"
 
 
 export default function App() {
@@ -36,6 +38,8 @@ export default function App() {
               <Route path="/slider-management" element={<Slidermanagement />} />
               <Route path="/subcategorybanner" element={<SubcategoryBanner />} />
               <Route path="/subcategorybannertable" element={<SubcategoryBannerTable />} />
+              <Route path="/parentcategorybanner" element={<ParentCategoryBanner />} />
+              <Route path="/parentcategorybannertable" element={<ParentCategoryBannerTable />} />
             </Routes>
           </div>
         </div>

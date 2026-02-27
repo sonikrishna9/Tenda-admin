@@ -24,7 +24,8 @@ const menu = [
       { label: "Category Product", path: "/parent-category" },
       { label: "Blogs", path: "/blogs" },
       { label: "Slider", path: "/slider-management" },
-      { label: "Sub Category Produt Banner", path: "/subcategorybanner" },
+      { label: "Sub Category Produt Banner", path: "/subcategorybannertable" },
+      { label: "Parent Category Produt Banner", path: "/parentcategorybannertable" },
     ],
   },
 ];
