@@ -15,6 +15,10 @@ import SubcategoryBanner from "./Component/SubcategoryBanner"
 import SubcategoryBannerTable from "./Component/SubcategoryBannerTable"
 import ParentCategoryBanner from "./Component/ParentCategoryBanner"
 import ParentCategoryBannerTable from "./Component/ParentCategoryBannerTable"
+import AddGallery from "./Component/Gallery/AddGallery"
+import GalleryManager from "./Component/Gallery/GalleryManager"
+import AddNewsForm from "./Component/News/AddNewsForm"
+import NewsTable from "./Component/News/NewsTable"
 
 
 export default function App() {
@@ -40,6 +44,10 @@ export default function App() {
               <Route path="/subcategorybannertable" element={<SubcategoryBannerTable />} />
               <Route path="/parentcategorybanner" element={<ParentCategoryBanner />} />
               <Route path="/parentcategorybannertable" element={<ParentCategoryBannerTable />} />
+              <Route path="/galleryadd" element={<AddGallery />} />
+              <Route path="/gallery" element={<GalleryManager />} />
+              <Route path="/addnews" element={<AddNewsForm />} />
+              <Route path="/newstable" element={<NewsTable/>} />
             </Routes>
           </div>
         </div>

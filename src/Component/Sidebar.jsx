@@ -26,6 +26,8 @@ const menu = [
       { label: "Slider", path: "/slider-management" },
       { label: "Sub Category Produt Banner", path: "/subcategorybannertable" },
       { label: "Parent Category Produt Banner", path: "/parentcategorybannertable" },
+      { label: "Gallery", path: "/gallery" },
+      { label: "News", path: "/newstable" },
     ],
   },
 ];
