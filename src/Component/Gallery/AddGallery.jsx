@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ApiClient from "../../middleware/ApiClient";
 import {
     FiUpload,
     FiX,
@@ -84,7 +85,7 @@ export default function AddGallery() {
                     const selectedDate = new Date(value);
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    
+
                     // Check if selected date is in the future
                     if (selectedDate > today) {
                         error = "Event date cannot be in the future. Only past dates are allowed.";
@@ -172,7 +173,7 @@ export default function AddGallery() {
             }
 
             // Check for duplicates (by name and size)
-            const isDuplicate = validFiles.some(existingFile => 
+            const isDuplicate = validFiles.some(existingFile =>
                 existingFile.name === file.name && existingFile.size === file.size
             );
 
@@ -192,10 +193,10 @@ export default function AddGallery() {
 
         // Create previews
         const previews = validFiles.map((file) => URL.createObjectURL(file));
-        
+
         // Cleanup old previews
         preview.forEach(url => URL.revokeObjectURL(url));
-        
+
         setPreview(previews);
     };
 
@@ -235,7 +236,6 @@ export default function AddGallery() {
             showNotification('error', 'Please fix all errors before submitting');
             return;
         }
-
         try {
             setLoading(true);
 
@@ -250,21 +250,17 @@ export default function AddGallery() {
                 formData.append("images", img);
             });
 
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/gallery/create`,
-                {
-                    method: "POST",
-                    body: formData,
-                }
+            const data = await ApiClient(
+                "POST",
+                "api/admin/gallery/create",
+                formData
             );
 
-            const data = await res.json();
-
-            if (!res.ok) {
+            if (!data.success) {
                 throw new Error(data.message || "Upload failed");
             }
 
-            showNotification('success', 'Gallery created successfully');
+            showNotification("success", "Gallery created successfully");
 
             // Reset form after successful submission
             setTimeout(() => {
@@ -277,12 +273,12 @@ export default function AddGallery() {
 
                 // Cleanup previews
                 preview.forEach(url => URL.revokeObjectURL(url));
-                
+
                 setImages([]);
                 setPreview([]);
                 setErrors({});
                 setTouched({});
-                
+
                 // Navigate back to gallery manager after 1 second
                 setTimeout(() => navigate('/gallery'), 1000);
             }, 1500);
@@ -290,7 +286,8 @@ export default function AddGallery() {
         } catch (error) {
             console.error(error);
             showNotification('error', error.message || "Failed to create gallery");
-        } finally {
+        }
+        finally {
             setLoading(false);
         }
     };
@@ -299,9 +296,8 @@ export default function AddGallery() {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
             {/* Notification */}
             {notification.show && (
-                <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slideIn ${
-                    notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
+                <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slideIn ${notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
                     {notification.type === 'success' ? <FiCheckCircle size={20} /> : <FiAlertCircle size={20} />}
                     <span>{notification.message}</span>
                 </div>
@@ -343,13 +339,12 @@ export default function AddGallery() {
                                     value={form.title}
                                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                                     onBlur={() => handleBlur('title')}
-                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                        touched.title && errors.title
-                                            ? 'border-red-300 bg-red-50'
-                                            : touched.title && !errors.title
+                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.title && errors.title
+                                        ? 'border-red-300 bg-red-50'
+                                        : touched.title && !errors.title
                                             ? 'border-green-300 bg-green-50'
                                             : 'border-gray-200 hover:border-blue-300'
-                                    }`}
+                                        }`}
                                     placeholder="Enter gallery title"
                                     maxLength={100}
                                 />
@@ -376,13 +371,12 @@ export default function AddGallery() {
                                     value={form.description}
                                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                                     onBlur={() => handleBlur('description')}
-                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none ${
-                                        touched.description && errors.description
-                                            ? 'border-red-300 bg-red-50'
-                                            : touched.description && !errors.description
+                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none ${touched.description && errors.description
+                                        ? 'border-red-300 bg-red-50'
+                                        : touched.description && !errors.description
                                             ? 'border-green-300 bg-green-50'
                                             : 'border-gray-200 hover:border-blue-300'
-                                    }`}
+                                        }`}
                                     placeholder="Enter gallery description"
                                     maxLength={1000}
                                 />
@@ -416,13 +410,12 @@ export default function AddGallery() {
                                         onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
                                         onBlur={() => handleBlur('eventDate')}
                                         max={today}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.eventDate && errors.eventDate
-                                                ? 'border-red-300 bg-red-50'
-                                                : touched.eventDate && !errors.eventDate
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.eventDate && errors.eventDate
+                                            ? 'border-red-300 bg-red-50'
+                                            : touched.eventDate && !errors.eventDate
                                                 ? 'border-green-300 bg-green-50'
                                                 : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                            }`}
                                     />
                                 </div>
                                 {touched.eventDate && errors.eventDate && (
@@ -451,13 +444,12 @@ export default function AddGallery() {
                                         value={form.location}
                                         onChange={(e) => setForm({ ...form, location: e.target.value })}
                                         onBlur={() => handleBlur('location')}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.location && errors.location
-                                                ? 'border-red-300 bg-red-50'
-                                                : touched.location && !errors.location
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.location && errors.location
+                                            ? 'border-red-300 bg-red-50'
+                                            : touched.location && !errors.location
                                                 ? 'border-green-300 bg-green-50'
                                                 : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                            }`}
                                         placeholder="Enter location"
                                         maxLength={200}
                                     />
@@ -481,11 +473,10 @@ export default function AddGallery() {
                             </label>
 
                             {/* Upload Area */}
-                            <div className={`border-3 border-dashed rounded-2xl p-8 transition-all ${
-                                images.length >= 7 
-                                    ? 'border-gray-200 bg-gray-50' 
-                                    : 'border-blue-300 bg-blue-50 hover:bg-blue-100'
-                            }`}>
+                            <div className={`border-3 border-dashed rounded-2xl p-8 transition-all ${images.length >= 7
+                                ? 'border-gray-200 bg-gray-50'
+                                : 'border-blue-300 bg-blue-50 hover:bg-blue-100'
+                                }`}>
                                 <input
                                     type="file"
                                     multiple
@@ -497,9 +488,8 @@ export default function AddGallery() {
                                 />
                                 <label
                                     htmlFor="image-upload"
-                                    className={`cursor-pointer flex flex-col items-center ${
-                                        images.length >= 7 ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                    className={`cursor-pointer flex flex-col items-center ${images.length >= 7 ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
                                     <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                                         <FiUpload size={32} className="text-blue-600" />

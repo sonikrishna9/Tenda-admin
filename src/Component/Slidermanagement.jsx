@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import ApiClient from "../middleware/ApiClient";
 import {
   FiUploadCloud,
   FiTrash2,
@@ -19,7 +19,6 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
-const API_BASE = import.meta.env.VITE_LOCAL_API || 'http://localhost:8080/api';
 
 const Slidermanagement = () => {
   const [sliders, setSliders] = useState([]);
@@ -40,9 +39,15 @@ const Slidermanagement = () => {
       setLoading(true);
       // Note: You might want to create a "get all sliders" endpoint
       // For now, we'll use a mock or you can implement backend endpoint
-      const response = await axios.get(`${API_BASE}api/admin/slider/all`);
-      if (response.data.success) {
-        setSliders(response.data.data || []);
+      const response = await ApiClient(
+        "GET",
+        "api/admin/slider/all",
+        null,
+        { withauth: true }
+      );
+
+      if (response.success) {
+        setSliders(response.data || []);
       }
     } catch (error) {
       console.error('Error fetching sliders:', error);
@@ -62,7 +67,7 @@ const Slidermanagement = () => {
     if (files.length === 0) return;
 
     // Validate file types
-    const validFiles = files.filter(file => 
+    const validFiles = files.filter(file =>
       file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
 
@@ -89,7 +94,7 @@ const Slidermanagement = () => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    const validFiles = files.filter(file => 
+    const validFiles = files.filter(file =>
       file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     );
 
@@ -140,25 +145,19 @@ const Slidermanagement = () => {
     try {
       const formData = new FormData();
       formData.append('slug', newSlider.slug);
-      
+
       newSlider.images.forEach((image) => {
         formData.append('images', image.file);
       });
 
-      const response = await axios.post(
-        `${API_BASE}api/admin/slider/${newSlider.slug}`,
+      const response = await ApiClient(
+        "POST",
+        `api/admin/slider/${newSlider.slug}`,
         formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            // You can show upload progress here
-          },
-        }
+        { withauth: true }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         showSnackbar('Slider created successfully', 'success');
         resetNewSlider();
         fetchSliders();
@@ -173,8 +172,8 @@ const Slidermanagement = () => {
 
   // Update slider
   const handleUpdateSlider = async () => {
-    if (editModal.images.filter(img => !img.isNew).length === 0) {
-      showSnackbar('Please add at least one image', 'error');
+    if (editModal.images.filter(img => img.isNew).length === 0) {
+      showSnackbar('Please add at least one new image', 'error');
       return;
     }
 
@@ -182,24 +181,20 @@ const Slidermanagement = () => {
 
     try {
       const formData = new FormData();
-      
+
       // Only include new images
       const newImages = editModal.images.filter(img => img.isNew);
       newImages.forEach((image) => {
         formData.append('images', image.file);
       });
 
-      const response = await axios.put(
-        `${API_BASE}api/admin/slider/${editModal.slug}`,
+      const response = await ApiClient(
+        "PUT",
+        `api/admin/slider/${editModal.slug}`,
         formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        { withauth: true }
       );
-
-      if (response.data.success) {
+      if (response.success) {
         showSnackbar('Slider updated successfully', 'success');
         setEditModal({ open: false, slug: '', images: [] });
         fetchSliders();
@@ -214,17 +209,27 @@ const Slidermanagement = () => {
 
   // Delete slider
   const handleDeleteSlider = async (slug) => {
+    setUploading(true);
+
     try {
-      const response = await axios.delete(`${API_BASE}/admin/slider/${slug}`);
-      
-      if (response.data.success) {
+      const response = await ApiClient(
+        "DELETE",
+        `api/admin/slider/${slug}`,
+        null,
+        { withauth: true }
+      );
+
+      if (response.success) {
         showSnackbar(`Slider "${slug}" deleted successfully`, 'success');
         setDeleteConfirm(null);
         fetchSliders();
       }
+
     } catch (error) {
       console.error('Error deleting slider:', error);
       showSnackbar(error.response?.data?.message || 'Error deleting slider', 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -252,7 +257,7 @@ const Slidermanagement = () => {
   const navigatePreview = (direction) => {
     setPreviewModal(prev => ({
       ...prev,
-      currentIndex: direction === 'next' 
+      currentIndex: direction === 'next'
         ? (prev.currentIndex + 1) % prev.images.length
         : (prev.currentIndex - 1 + prev.images.length) % prev.images.length
     }));
@@ -284,7 +289,7 @@ const Slidermanagement = () => {
 
   // Get API endpoint for a slider
   const getApiEndpoint = (slug) => {
-    return `${API_BASE.replace('/api', '')}api/slider/${slug}`;
+    return `/api/slider/${slug}`;
   };
 
   return (
@@ -406,14 +411,14 @@ const Slidermanagement = () => {
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${newSlider.images.length > 0 
-                  ? 'border-blue-300 bg-blue-50' 
+                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${newSlider.images.length > 0
+                  ? 'border-blue-300 bg-blue-50'
                   : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                }`}
+                  }`}
               >
                 <FiUploadCloud className="text-4xl text-blue-400 mx-auto mb-4" />
                 <p className="text-gray-700 font-medium mb-2">
-                  {newSlider.images.length > 0 
+                  {newSlider.images.length > 0
                     ? `${newSlider.images.length} image(s) selected`
                     : 'Click to upload images'
                   }
@@ -650,7 +655,7 @@ const Slidermanagement = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6">
               {/* Current Images */}
               {editModal.images.filter(img => !img.isNew).length > 0 && (
@@ -733,7 +738,7 @@ const Slidermanagement = () => {
                           />
                           <button
                             onClick={() => removeEditImage(
-                              editModal.images.findIndex(img => 
+                              editModal.images.findIndex(img =>
                                 img.isNew && img.preview === image.preview
                               )
                             )}
@@ -790,7 +795,7 @@ const Slidermanagement = () => {
             >
               <FiXCircle className="text-gray-700 text-xl" />
             </button>
-            
+
             <div className="relative h-full">
               {previewModal.images.length > 0 && (
                 <>
@@ -799,7 +804,7 @@ const Slidermanagement = () => {
                     alt={`Preview ${previewModal.currentIndex + 1}`}
                     className="w-full h-[70vh] object-contain rounded-lg"
                   />
-                  
+
                   {/* Navigation Arrows */}
                   {previewModal.images.length > 1 && (
                     <>
@@ -817,7 +822,7 @@ const Slidermanagement = () => {
                       </button>
                     </>
                   )}
-                  
+
                   {/* Image Counter */}
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white px-4 py-2 rounded-full">
                     {previewModal.currentIndex + 1} / {previewModal.images.length}
@@ -825,7 +830,7 @@ const Slidermanagement = () => {
                 </>
               )}
             </div>
-            
+
             {/* Thumbnail Strip */}
             {previewModal.images.length > 1 && (
               <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
@@ -833,10 +838,10 @@ const Slidermanagement = () => {
                   <button
                     key={index}
                     onClick={() => setPreviewModal(prev => ({ ...prev, currentIndex: index }))}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${index === previewModal.currentIndex 
-                      ? 'border-blue-500' 
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${index === previewModal.currentIndex
+                      ? 'border-blue-500'
                       : 'border-transparent'
-                    }`}
+                      }`}
                   >
                     <img
                       src={image.url || image.preview}
@@ -874,9 +879,17 @@ const Slidermanagement = () => {
               </button>
               <button
                 onClick={() => handleDeleteSlider(deleteConfirm)}
-                className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-medium transition-all duration-200 shadow-md"
+                disabled={uploading}
+                className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium"
               >
-                Delete Permanently
+                {uploading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Deleting...
+                  </div>
+                ) : (
+                  "Delete Permanently"
+                )}
               </button>
             </div>
           </div>
@@ -889,8 +902,8 @@ const Slidermanagement = () => {
           <div className={`rounded-xl shadow-lg p-4 max-w-sm border-l-4 ${snackbar.type === 'success'
             ? 'bg-green-50 border-green-400'
             : snackbar.type === 'error'
-            ? 'bg-red-50 border-red-400'
-            : 'bg-yellow-50 border-yellow-400'
+              ? 'bg-red-50 border-red-400'
+              : 'bg-yellow-50 border-yellow-400'
             }`}>
             <div className="flex items-center">
               {snackbar.type === 'success' ? (
@@ -901,10 +914,10 @@ const Slidermanagement = () => {
                 <FiAlertCircle className="text-yellow-500 mr-3 text-xl flex-shrink-0" />
               )}
               <div className="flex-1">
-                <p className={`font-medium ${snackbar.type === 'success' ? 'text-green-800' 
-                  : snackbar.type === 'error' ? 'text-red-800' 
-                  : 'text-yellow-800'
-                }`}>
+                <p className={`font-medium ${snackbar.type === 'success' ? 'text-green-800'
+                  : snackbar.type === 'error' ? 'text-red-800'
+                    : 'text-yellow-800'
+                  }`}>
                   {snackbar.message}
                 </p>
               </div>

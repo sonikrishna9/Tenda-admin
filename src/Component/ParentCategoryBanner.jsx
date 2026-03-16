@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate } from "react-router-dom";
+import ApiClient from "../middleware/ApiClient";
 
 export default function ParentCategoryBanner() {
   const navigate = useNavigate();
@@ -38,11 +39,11 @@ export default function ParentCategoryBanner() {
     try {
       setLoading(true);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_LOCAL_API}api/parentcategory/getall`
+      const result = await ApiClient(
+        "GET",
+        "api/admin/parentcategory/getall"
       );
 
-      const result = await res.json();
       const arr = result?.parentcategory || [];
 
       if (Array.isArray(arr)) {
@@ -94,7 +95,7 @@ export default function ParentCategoryBanner() {
   const handleImage = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+    // console.log("file", file);   // add this
     // Validate file type
     if (!file.type.startsWith('image/')) {
       setErrors(prev => ({ ...prev, bannerImage: "Please select an image file" }));
@@ -107,9 +108,15 @@ export default function ParentCategoryBanner() {
       return;
     }
 
-    setForm(prev => ({ ...prev, bannerImage: file }));
-    setPreview(URL.createObjectURL(file));
-    
+    const imageUrl = URL.createObjectURL(file);
+
+    setForm(prev => ({
+      ...prev,
+      bannerImage: file
+    }));
+
+    setPreview(imageUrl);
+
     // Clear any existing image errors
     if (errors.bannerImage) {
       setErrors(prev => ({ ...prev, bannerImage: null }));
@@ -152,6 +159,7 @@ export default function ParentCategoryBanner() {
     setSubmitting(true);
 
     try {
+
       const formData = new FormData();
 
       formData.append("title", form.title);
@@ -160,29 +168,35 @@ export default function ParentCategoryBanner() {
       formData.append("description", form.description);
       formData.append("bannerImage", form.bannerImage);
 
-      const res = await fetch(
-        `${import.meta.env.VITE_LOCAL_API}api/parentcategorybanner/create`,
-        {
-          method: "POST",
-          body: formData
-        }
+      const data = await ApiClient(
+        "POST",
+        "api/admin/parentcategorybanner/create",
+        formData
       );
 
-      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message);
+      }
 
-      if (!res.ok) throw new Error(data.message);
-
-      // Show success message
       alert("✅ Parent Category Banner Created Successfully");
+
       navigate("/parentcategorybannertable");
 
     } catch (err) {
       alert("❌ Error: " + err.message);
-    } finally {
+    }
+    finally {
       setSubmitting(false);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+ 
   /* ================= UI ================= */
 
   return (
@@ -236,11 +250,10 @@ export default function ParentCategoryBanner() {
                     onChange={handleChange}
                     onBlur={() => handleBlur('title')}
                     placeholder="Enter banner title"
-                    className={`w-full px-4 py-3 rounded-lg border ${
-                      touched.title && errors.title 
-                        ? 'border-red-500 ring-1 ring-red-500' 
-                        : 'border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-                    } transition-all duration-200 outline-none`}
+                    className={`w-full px-4 py-3 rounded-lg border ${touched.title && errors.title
+                      ? 'border-red-500 ring-1 ring-red-500'
+                      : 'border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                      } transition-all duration-200 outline-none`}
                   />
                   {touched.title && errors.title && (
                     <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -277,11 +290,10 @@ export default function ParentCategoryBanner() {
                   value={form.parentCategory}
                   onChange={handleChange}
                   onBlur={() => handleBlur('parentCategory')}
-                  className={`w-full px-4 py-3 rounded-lg border ${
-                    touched.parentCategory && errors.parentCategory
-                      ? 'border-red-500 ring-1 ring-red-500'
-                      : 'border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-                  } transition-all duration-200 outline-none bg-white`}
+                  className={`w-full px-4 py-3 rounded-lg border ${touched.parentCategory && errors.parentCategory
+                    ? 'border-red-500 ring-1 ring-red-500'
+                    : 'border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                    } transition-all duration-200 outline-none bg-white`}
                 >
                   <option value="">Select Parent Category</option>
                   {loading ? (
@@ -324,54 +336,33 @@ export default function ParentCategoryBanner() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Banner Image <span className="text-red-500">*</span>
                 </label>
-                
-                {!preview ? (
-                  <div className={`border-2 border-dashed rounded-lg p-8 transition-all duration-200 ${
-                    errors.bannerImage 
-                      ? 'border-red-300 bg-red-50' 
-                      : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                  }`}>
-                    <div className="text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H8a4 4 0 01-4-4V12a4 4 0 014-4h12m16 0h4m-4-4v4m0 0h-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div className="mt-4 flex text-sm text-gray-600 justify-center">
-                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                          <span>Upload a file</span>
-                          <input
-                            id="file-upload"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImage}
-                            className="sr-only"
-                          />
-                        </label>
-                        <p className="pl-1">or drag and drop</p>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        PNG, JPG, GIF up to 5MB
-                      </p>
-                    </div>
+
+                {!preview && (
+                  <div className="border-2 border-dashed rounded-lg p-8">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImage}
+                      className="mt-2"
+                    />
                   </div>
-                ) : (
+                )}
+
+                {preview && (
                   <div className="relative rounded-lg overflow-hidden border border-gray-200 group">
                     <img
                       src={preview}
                       alt="Preview"
                       className="w-full h-64 object-contain bg-gray-50"
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-300 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Remove
-                      </button>
-                    </div>
+
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 rounded"
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
 

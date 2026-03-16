@@ -38,7 +38,9 @@ const UpdateProduct = () => {
   const [removeFeaturePictureIds, setRemoveFeaturePictureIds] = useState([]);
 
   const [parameters, setParameters] = useState([]);
+  const [buyLinks, setBuyLinks] = useState([]);
 
+  const [companies, setCompanies] = useState([]);
 
   const [removeImageIds, setRemoveImageIds] = useState([]);
   const [removeVideoIds, setRemoveVideoIds] = useState([]);
@@ -79,11 +81,31 @@ const UpdateProduct = () => {
           ? pdfData.downloadpdfs
           : [],
       });
+      setBuyLinks(
+        (product.buylink || []).map((b) => ({
+          companyname: b.companyname || "",
+          image: b.items?.[0]?.image || "",
+          link: b.items?.[0]?.link || "",
+        }))
+      );
 
     }
   }, [product]);
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const res = await ApiClient("GET", "api/company");
+        if (res.success) {
+          setCompanies(res.companies);
+        }
+      } catch (err) {
+        console.error("Failed to fetch companies", err);
+      }
+    };
 
+    fetchCompanies();
+  }, []);
 
   const handleFeaturedChange = (e) => {
     setForm((prev) => ({
@@ -279,6 +301,8 @@ const UpdateProduct = () => {
 
 
 
+
+
   const removeNewVideoPreview = (id) => {
     const videoToRemove = newVideoPreviews.find(video => video.id === id);
     if (videoToRemove) {
@@ -320,6 +344,41 @@ const UpdateProduct = () => {
     setNewDownloadPdfs(prev => prev.filter((_, i) => i !== index));
   };
 
+  /* ---------------- BUY LINKS ---------------- */
+
+  const addBuyLink = () => {
+    if (buyLinks.length >= 10) {
+      alert("Maximum 10 buy links allowed");
+      return;
+    }
+
+    setBuyLinks((prev) => [
+      ...prev,
+      { companyname: "", image: "", link: "" },
+    ]);
+  };
+
+  const updateBuyLink = (index, field, value) => {
+    const updated = [...buyLinks];
+
+    if (field === "companyname") {
+      const selectedCompany = companies.find(
+        (c) => c.companyName === value
+      );
+
+      updated[index].companyname = value;
+      updated[index].image = selectedCompany?.logo?.url || "";
+    } else {
+      updated[index][field] = value;
+    }
+
+    setBuyLinks(updated);
+  };
+
+  const removeBuyLink = (index) => {
+    setBuyLinks((prev) => prev.filter((_, i) => i !== index));
+  };
+
   /* ---------------- VIEW HANDLERS ---------------- */
   const openInNewTab = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -331,7 +390,7 @@ const UpdateProduct = () => {
       newImagePreviews.forEach(img => URL.revokeObjectURL(img.preview));
       newVideoPreviews.forEach(video => URL.revokeObjectURL(video.preview));
     };
-  }, [newImagePreviews, newVideoPreviews]);
+  }, []);
 
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async (e) => {
@@ -360,6 +419,20 @@ const UpdateProduct = () => {
       JSON.stringify(removeFeaturePictureIds)
     );
 
+    formData.append(
+      "buylink",
+      JSON.stringify(
+        buyLinks.map((b) => ({
+          companyname: b.companyname,
+          items: [
+            {
+              image: b.image,
+              link: b.link,
+            },
+          ],
+        }))
+      )
+    );
 
     /* new uploads */
     newImages.forEach((img) => formData.append("images", img));
@@ -374,7 +447,7 @@ const UpdateProduct = () => {
     try {
       const res = await ApiClient(
         "PUT",
-        `api/product/update/${product._id}`,
+        `api/admin/product/update/${product._id}`,
         formData
       );
 
@@ -781,6 +854,86 @@ const UpdateProduct = () => {
             </div>
           </div>
 
+          {/* BUY LINKS SECTION */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Buy Links
+              </h3>
+
+              <button
+                type="button"
+                onClick={addBuyLink}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+              >
+                + Add Buy Link
+              </button>
+            </div>
+
+            {buyLinks.length === 0 && (
+              <p className="text-gray-500 italic">No buy links added yet</p>
+            )}
+
+            <div className="space-y-4">
+              {buyLinks.map((item, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white border rounded-lg p-4"
+                >
+                  {/* COMPANY DROPDOWN */}
+                  <select
+                    value={item.companyname}
+                    onChange={(e) =>
+                      updateBuyLink(index, "companyname", e.target.value)
+                    }
+                    className="px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select Company</option>
+
+                    {companies.map((company) => (
+                      <option key={company._id} value={company.companyName}>
+                        {company.companyName}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* COMPANY LOGO PREVIEW */}
+                  <div className="flex items-center justify-center border rounded-lg p-2 bg-gray-50">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt="logo"
+                        className="h-8 object-contain"
+                      />
+                    ) : (
+                      <span className="text-gray-400 text-sm">Logo</span>
+                    )}
+                  </div>
+
+                  {/* PRODUCT LINK */}
+                  <input
+                    type="text"
+                    placeholder="Product Link"
+                    value={item.link}
+                    onChange={(e) =>
+                      updateBuyLink(index, "link", e.target.value)
+                    }
+                    className="px-3 py-2 border rounded-lg"
+                  />
+
+                  {/* REMOVE */}
+                  <button
+                    type="button"
+                    onClick={() => removeBuyLink(index)}
+                    className="bg-red-500 text-white rounded-lg px-3 py-2 hover:bg-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* FEATURE PICTURES SECTION */}
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-100">
             <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
@@ -1040,7 +1193,7 @@ const UpdateProduct = () => {
                             <div className="flex gap-3 mt-1">
                               <button
                                 type="button"
-                                onClick={() => openInNewTab(pdf)}
+                                onClick={() => openInNewTab(pdf.url)}
                                 className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                               >
                                 <FiEye size={12} /> View PDF
@@ -1051,7 +1204,7 @@ const UpdateProduct = () => {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => openInNewTab(pdf)}
+                            onClick={() => openInNewTab(pdf.url)}
                             className="text-blue-500 hover:text-blue-700 p-1"
                             title="View PDF"
                           >
@@ -1166,7 +1319,7 @@ const UpdateProduct = () => {
                             <div className="flex gap-3 mt-1">
                               <button
                                 type="button"
-                                onClick={() => openInNewTab(pdf)}
+                                onClick={() => openInNewTab(pdf.url)}
                                 className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                               >
                                 <FiEye size={12} /> View PDF
@@ -1177,7 +1330,7 @@ const UpdateProduct = () => {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => openInNewTab(pdf)}
+                            onClick={() => openInNewTab(pdf.url)}
                             className="text-blue-500 hover:text-blue-700 p-1"
                             title="View PDF"
                           >

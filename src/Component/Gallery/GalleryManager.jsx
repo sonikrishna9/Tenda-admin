@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import ApiClient from "../../middleware/ApiClient";
 import {
     FiEdit2,
     FiTrash2,
@@ -49,17 +50,19 @@ export default function GalleryManager() {
     const fetchGalleries = async () => {
         try {
             setLoading(true);
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/gallery/get-all`
+
+            const data = await ApiClient(
+                "GET",
+                "api/admin/gallery/get-all"
             );
-            const data = await res.json();
 
             if (data.success) {
                 setGalleries(data.data);
             }
+
         } catch (error) {
             console.error(error);
-            showNotification('error', 'Failed to fetch galleries');
+            showNotification("error", "Failed to fetch galleries");
         } finally {
             setLoading(false);
         }
@@ -72,24 +75,24 @@ export default function GalleryManager() {
     /* ================= DELETE ================= */
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this gallery? This action cannot be undone.")) return;
+        if (!window.confirm("Are you sure you want to delete this gallery?")) return;
 
         try {
             setActionLoading(true);
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/gallery/delete/${id}`,
-                { method: "DELETE" }
+
+            const data = await ApiClient(
+                "DELETE",
+                `api/admin/gallery/delete/${id}`
             );
 
-            const data = await res.json();
-
             if (data.success) {
-                showNotification('success', 'Gallery deleted successfully');
+                showNotification("success", "Gallery deleted successfully");
                 fetchGalleries();
             }
+
         } catch (error) {
             console.error(error);
-            showNotification('error', 'Failed to delete gallery');
+            showNotification("error", "Failed to delete gallery");
         } finally {
             setActionLoading(false);
         }
@@ -185,16 +188,11 @@ export default function GalleryManager() {
                 formData.append("images", img);
             });
 
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/gallery/update/${editGallery._id}`,
-                {
-                    method: "PUT",
-                    body: formData,
-                }
+            const data = await ApiClient(
+                "PUT",
+                `api/admin/gallery/update/${editGallery._id}`,
+                formData
             );
-
-            const data = await res.json();
-
             if (data.success) {
                 showNotification('success', 'Gallery updated successfully');
                 setEditGallery(null);
@@ -236,7 +234,7 @@ export default function GalleryManager() {
                         <h1 className="text-3xl font-bold text-gray-800">Gallery Manager</h1>
                         <p className="text-gray-600 mt-2">Manage your photo galleries and memories</p>
                     </div>
-                    
+
                     {/* Add New Gallery Button */}
                     <button
                         onClick={() => navigate('/galleryadd')}

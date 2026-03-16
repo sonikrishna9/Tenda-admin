@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate } from "react-router-dom";
+import ApiClient from "../middleware/ApiClient";
 
 export default function SubcategoryBanner() {
   const navigate = useNavigate();
@@ -75,11 +76,12 @@ export default function SubcategoryBanner() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `${import.meta.env.VITE_LOCAL_API}api/product/all-categories`
+
+      const result = await ApiClient(
+        "GET",
+        "api/admin/product/all-categories"
       );
 
-      const result = await res.json();
       const arr = result?.allproducts || [];
 
       if (Array.isArray(arr)) {
@@ -230,17 +232,15 @@ export default function SubcategoryBanner() {
         }
       });
 
-      const res = await fetch(
-        `${import.meta.env.VITE_LOCAL_API}api/subcategory/create`,
-        {
-          method: "POST",
-          body: formData
-        }
+      const data = await ApiClient(
+        "POST",
+        "api/admin/subcategory/create",
+        formData
       );
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Upload failed");
+      if (!data.success) {
+        throw new Error(data.message || "Upload failed");
+      }
 
       alert("✅ Banner created successfully");
       navigate("/subcategorybannertable");
@@ -310,7 +310,7 @@ export default function SubcategoryBanner() {
 
             {/* Back Button */}
             <button
-              onClick={() => window.location.href = '/subcategorybannertable'}
+              onClick={() => navigate("/subcategorybannertable")}
               className="inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 bg-white text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,8 +372,8 @@ export default function SubcategoryBanner() {
                     onBlur={handleBlur}
                     placeholder="Enter banner title (e.g., Summer Sale Banner)"
                     className={`w-full px-4 py-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:outline-none transition ${errors.title && touched.title
-                        ? 'border-red-500 focus:ring-red-200'
-                        : 'border-gray-300 focus:ring-blue-500'
+                      ? 'border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:ring-blue-500'
                       }`}
                   />
                   {errors.title && touched.title && (
@@ -401,8 +401,8 @@ export default function SubcategoryBanner() {
                     onBlur={handleBlur}
                     placeholder="Enter subtitle (optional)"
                     className={`w-full px-4 py-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:outline-none transition ${errors.subtitle && touched.subtitle
-                        ? 'border-red-500 focus:ring-red-200'
-                        : 'border-gray-300 focus:ring-blue-500'
+                      ? 'border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:ring-blue-500'
                       }`}
                   />
                   {errors.subtitle && touched.subtitle && (
@@ -426,8 +426,8 @@ export default function SubcategoryBanner() {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       className={`w-full px-4 py-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:outline-none transition ${errors.parentCategory && touched.parentCategory
-                          ? 'border-red-500 focus:ring-red-200'
-                          : 'border-gray-300 focus:ring-blue-500'
+                        ? 'border-red-500 focus:ring-red-200'
+                        : 'border-gray-300 focus:ring-blue-500'
                         }`}
                     >
                       <option value="">Select parent category</option>
@@ -474,8 +474,8 @@ export default function SubcategoryBanner() {
                     Description
                   </label>
                   <div className={`border rounded-xl overflow-hidden bg-white ${errors.description && touched.description
-                      ? 'border-red-500'
-                      : 'border-gray-300'
+                    ? 'border-red-500'
+                    : 'border-gray-300'
                     }`}>
                     <ReactQuill
                       theme="snow"
@@ -557,7 +557,7 @@ export default function SubcategoryBanner() {
                 <div className="pt-6 flex items-center justify-end space-x-4 border-t border-gray-200">
                   <button
                     type="button"
-                    onClick={() => window.location.href = '/subcategorybannertable'}
+                    onClick={() => navigate("/subcategorybannertable")}
                     className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition font-medium"
                   >
                     Cancel

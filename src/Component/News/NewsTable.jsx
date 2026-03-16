@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import ApiClient from "../../middleware/ApiClient";
 import {
     FiEdit2,
     FiTrash2,
@@ -63,14 +64,16 @@ export default function NewsTable() {
     const fetchNews = async () => {
         try {
             setLoading(true);
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/news/all`
+            const data = await ApiClient(
+                "GET",
+                "api/admin/news/all"
             );
-            const data = await res.json();
 
             if (data.success) {
                 setNews(data.data);
             }
+
+
         } catch (error) {
             console.error("Fetch News Error:", error);
             showNotification('error', 'Failed to fetch news');
@@ -86,24 +89,24 @@ export default function NewsTable() {
     /* ================= DELETE NEWS ================= */
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this news? This action cannot be undone.")) return;
+        if (!window.confirm("Are you sure you want to delete this news?")) return;
 
         try {
             setActionLoading(true);
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/news/delete/${id}`,
-                { method: "DELETE" }
+
+            const data = await ApiClient(
+                "DELETE",
+                `api/admin/news/delete/${id}`
             );
 
-            const data = await res.json();
-
             if (data.success) {
-                showNotification('success', 'News deleted successfully');
+                showNotification("success", "News deleted successfully");
                 fetchNews();
             }
+
         } catch (error) {
             console.error("Delete Error:", error);
-            showNotification('error', 'Failed to delete news');
+            showNotification("error", "Failed to delete news");
         } finally {
             setActionLoading(false);
         }
@@ -320,17 +323,15 @@ export default function NewsTable() {
             // Add flag to indicate if current banner should be removed
             formData.append("removeCurrentBanner", removeCurrentBanner.toString());
 
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/news/update/${editNews._id}`,
-                {
-                    method: "PUT",
-                    body: formData,
-                }
+            const result = await ApiClient(
+                "PUT",
+                `api/admin/news/update/${editNews._id}`,
+                formData
             );
 
-            const result = await res.json();
-
-            if (!res.ok) throw new Error(result.message);
+            if (!result.success) {
+                throw new Error(result.message);
+            }
 
             showNotification('success', 'News updated successfully');
 

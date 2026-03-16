@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ApiClient from "../../middleware/ApiClient";
 import {
     FiUpload,
     FiLoader,
@@ -91,7 +92,7 @@ export default function AddNewsForm() {
                     const selectedDate = new Date(value);
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    
+
                     if (selectedDate > today) {
                         error = "Published date cannot be in the future";
                     }
@@ -160,7 +161,7 @@ export default function AddNewsForm() {
             ...formData,
             [e.target.name]: e.target.value,
         });
-        
+
         // Clear error for this field when user starts typing
         if (errors[e.target.name]) {
             setErrors({ ...errors, [e.target.name]: "" });
@@ -194,7 +195,7 @@ export default function AddNewsForm() {
 
         setBannerImage(file);
         setBannerPreview(URL.createObjectURL(file));
-        
+
         // Clear banner error if exists
         if (errors.banner) {
             setErrors({ ...errors, banner: "" });
@@ -208,7 +209,7 @@ export default function AddNewsForm() {
         setBannerImage(null);
         setBannerPreview(null);
         document.getElementById('banner-upload').value = '';
-        
+
         // Set banner error
         setErrors({ ...errors, banner: "Banner image is required" });
     };
@@ -241,19 +242,17 @@ export default function AddNewsForm() {
                 data.append("bannerImage", bannerImage);
             }
 
-            const res = await fetch(
-                `${import.meta.env.VITE_LOCAL_API}api/news/create`,
-                {
-                    method: "POST",
-                    body: data,
-                }
+            const result = await ApiClient(
+                "POST",
+                "api/admin/news/create",
+                data
             );
 
-            const result = await res.json();
+            if (!result.success) {
+                throw new Error(result.message);
+            }
 
-            if (!res.ok) throw new Error(result.message);
-
-            showNotification('success', 'News created successfully');
+            showNotification("success", "News created successfully");
 
             // Reset form after successful submission
             setTimeout(() => {
@@ -269,14 +268,14 @@ export default function AddNewsForm() {
                 if (bannerPreview) {
                     URL.revokeObjectURL(bannerPreview);
                 }
-                
+
                 setBannerImage(null);
                 setBannerPreview(null);
                 setErrors({});
                 setTouched({});
-                
+
                 // Navigate back to news manager after 1 second
-                setTimeout(() => navigate('/news'), 1000);
+                setTimeout(() => navigate('/newstable'), 1000);
             }, 1500);
 
         } catch (error) {
@@ -291,9 +290,8 @@ export default function AddNewsForm() {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
             {/* Notification */}
             {notification.show && (
-                <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slideIn ${
-                    notification.type === 'success' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
+                <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slideIn ${notification.type === 'success' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
                     {notification.type === 'success' ? <FiCheckCircle size={20} /> : <FiAlertCircle size={20} />}
                     <span>{notification.message}</span>
                 </div>
@@ -337,13 +335,12 @@ export default function AddNewsForm() {
                                     value={formData.title}
                                     onChange={handleChange}
                                     onBlur={() => handleBlur('title')}
-                                    className={`w-full pl-10 pr-16 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                        touched.title && errors.title
-                                            ? 'border-red-300 bg-red-50'
-                                            : touched.title && !errors.title
+                                    className={`w-full pl-10 pr-16 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.title && errors.title
+                                        ? 'border-red-300 bg-red-50'
+                                        : touched.title && !errors.title
                                             ? 'border-blue-300 bg-blue-50'
                                             : 'border-gray-200 hover:border-blue-300'
-                                    }`}
+                                        }`}
                                     placeholder="Enter news title"
                                     maxLength={200}
                                 />
@@ -371,13 +368,12 @@ export default function AddNewsForm() {
                                     value={formData.description}
                                     onChange={handleChange}
                                     onBlur={() => handleBlur('description')}
-                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none ${
-                                        touched.description && errors.description
-                                            ? 'border-red-300 bg-red-50'
-                                            : touched.description && !errors.description
+                                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all resize-none ${touched.description && errors.description
+                                        ? 'border-red-300 bg-red-50'
+                                        : touched.description && !errors.description
                                             ? 'border-blue-300 bg-blue-50'
                                             : 'border-gray-200 hover:border-blue-300'
-                                    }`}
+                                        }`}
                                     placeholder="Enter detailed news description"
                                     maxLength={5000}
                                 />
@@ -412,13 +408,12 @@ export default function AddNewsForm() {
                                         onChange={handleChange}
                                         onBlur={() => handleBlur('publishedDate')}
                                         max={today}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.publishedDate && errors.publishedDate
-                                                ? 'border-red-300 bg-red-50'
-                                                : touched.publishedDate && !errors.publishedDate
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.publishedDate && errors.publishedDate
+                                            ? 'border-red-300 bg-red-50'
+                                            : touched.publishedDate && !errors.publishedDate
                                                 ? 'border-blue-300 bg-blue-50'
                                                 : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                            }`}
                                     />
                                 </div>
                                 {touched.publishedDate && errors.publishedDate && (
@@ -448,13 +443,12 @@ export default function AddNewsForm() {
                                         value={formData.location}
                                         onChange={handleChange}
                                         onBlur={() => handleBlur('location')}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.location && errors.location
-                                                ? 'border-red-300 bg-red-50'
-                                                : touched.location && !errors.location
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.location && errors.location
+                                            ? 'border-red-300 bg-red-50'
+                                            : touched.location && !errors.location
                                                 ? 'border-blue-300 bg-blue-50'
                                                 : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                            }`}
                                         placeholder="Enter location"
                                         maxLength={200}
                                     />
@@ -483,11 +477,10 @@ export default function AddNewsForm() {
                                         value={formData.category}
                                         onChange={handleChange}
                                         onBlur={() => handleBlur('category')}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.category && errors.category
-                                                ? 'border-red-300 bg-red-50'
-                                                : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.category && errors.category
+                                            ? 'border-red-300 bg-red-50'
+                                            : 'border-gray-200 hover:border-blue-300'
+                                            }`}
                                         placeholder="Enter category (e.g., Politics, Sports)"
                                         maxLength={100}
                                     />
@@ -513,11 +506,10 @@ export default function AddNewsForm() {
                                         value={formData.author}
                                         onChange={handleChange}
                                         onBlur={() => handleBlur('author')}
-                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${
-                                            touched.author && errors.author
-                                                ? 'border-red-300 bg-red-50'
-                                                : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all ${touched.author && errors.author
+                                            ? 'border-red-300 bg-red-50'
+                                            : 'border-gray-200 hover:border-blue-300'
+                                            }`}
                                         placeholder="Enter author name"
                                         maxLength={100}
                                     />

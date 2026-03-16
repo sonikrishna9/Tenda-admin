@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useNavigate } from "react-router-dom";
+import ApiClient from "../middleware/ApiClient";
 
-const API = import.meta.env.VITE_LOCAL_API + "api/parentcategorybanner";
+// const API = import.meta.env.VITE_LOCAL_API + "api/parentcategorybanner";
 
 export default function ParentCategoryBannerTable() {
   const navigate = useNavigate();
   const [banners, setBanners] = useState([]);
+  const [parentCategories, setParentCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
@@ -16,7 +18,7 @@ export default function ParentCategoryBannerTable() {
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [selectedBanner, setselectedBanner] = useState(null);
   const [viewModal, setViewModal] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
 
@@ -35,10 +37,14 @@ export default function ParentCategoryBannerTable() {
   const fetchBanners = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/all`);
-      const data = await res.json();
+      const data = await ApiClient(
+        "GET",
+        "api/admin/parentcategorybanner/all"
+      );
 
-      if (data.success) setBanners(data.banners || []);
+      if (data.success) {
+        setBanners(data.banners || []);
+      }
     } catch (err) {
       alert("Failed to load banners");
     } finally {
@@ -46,8 +52,28 @@ export default function ParentCategoryBannerTable() {
     }
   };
 
+  const fetchCategories = async () => {
+
+    try {
+
+      const data = await ApiClient(
+        "GET",
+        "api/admin/parentcategory/getall"
+      );
+
+      if (data.success) {
+        setParentCategories(data.parentcategory || []);
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+
+  };
+
   useEffect(() => {
     fetchBanners();
+    fetchCategories();
   }, []);
 
   /* ================= DELETE ================= */
@@ -57,15 +83,18 @@ export default function ParentCategoryBannerTable() {
     try {
       setDeleteLoading(id);
 
-      const res = await fetch(`${API}/delete/${id}`, {
-        method: "DELETE"
-      });
+      const data = await ApiClient(
+        "DELETE",
+        `api/admin/parentcategorybanner/delete/${id}`
+      );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!data.success) {
+        throw new Error(data.message);
+      }
+
 
       setBanners(prev => prev.filter(b => b._id !== id));
-      
+
       // Show success message
       alert("✅ Banner deleted successfully");
 
@@ -78,7 +107,9 @@ export default function ParentCategoryBannerTable() {
 
   /* ================= EDIT ================= */
   const openEdit = (banner) => {
-    setEditing(banner._id);
+
+    const imageUrl = banner?.bannerImage?.url || "";
+
     setForm({
       title: banner.title || "",
       subtitle: banner.subtitle || "",
@@ -86,8 +117,11 @@ export default function ParentCategoryBannerTable() {
       description: banner.description || "",
       bannerImage: null
     });
-    setPreview(banner.bannerImage?.url || null);
-    setFormErrors({});
+
+    setPreview(imageUrl);
+
+    // modal last me open karo
+    setEditing(banner._id);
   };
 
   const handleImageChange = (e) => {
@@ -135,13 +169,16 @@ export default function ParentCategoryBannerTable() {
         }
       });
 
-      const res = await fetch(`${API}/update/${editing}`, {
-        method: "PUT",
-        body: formData
-      });
+      const data = await ApiClient(
+        "PUT",
+        `api/admin/parentcategorybanner/update/${editing}`,
+        formData
+      );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!data.success) {
+        throw new Error(data.message);
+      }
+      // if (!res.ok) throw new Error(data.message);
 
       alert("✅ Banner updated successfully");
       setEditing(null);
@@ -156,7 +193,7 @@ export default function ParentCategoryBannerTable() {
 
   /* ================= VIEW DETAILS ================= */
   const openViewModal = (banner) => {
-    setSelectedBanner(banner);
+    setselectedBanner(banner);
     setViewModal(true);
   };
 
@@ -164,6 +201,8 @@ export default function ParentCategoryBannerTable() {
   const handleImageError = (bannerId) => {
     setImageErrors(prev => ({ ...prev, [bannerId]: true }));
   };
+
+
 
   /* ================= SEARCH FILTER ================= */
   const filteredBanners = banners.filter(b =>
@@ -180,7 +219,7 @@ export default function ParentCategoryBannerTable() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* HEADER SECTION WITH STATS */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -336,8 +375,8 @@ export default function ParentCategoryBannerTable() {
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredBanners.map((banner, index) => (
-                    <tr 
-                      key={banner._id} 
+                    <tr
+                      key={banner._id}
                       className="hover:bg-slate-50 transition-colors duration-150 group"
                     >
                       <td className="px-6 py-4">
@@ -459,7 +498,7 @@ export default function ParentCategoryBannerTable() {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="p-6">
                 <div className="mb-6 rounded-xl overflow-hidden shadow-lg border border-slate-200">
                   {selectedBanner.bannerImage?.url && !imageErrors[selectedBanner._id] ? (
@@ -528,7 +567,7 @@ export default function ParentCategoryBannerTable() {
                   <div className="mt-6">
                     <div className="bg-slate-50 p-4 rounded-xl">
                       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 block">Description</label>
-                      <div 
+                      <div
                         className="prose max-w-none bg-white p-4 rounded-lg border border-slate-200"
                         dangerouslySetInnerHTML={{ __html: selectedBanner.description }}
                       />
@@ -541,6 +580,7 @@ export default function ParentCategoryBannerTable() {
         )}
 
         {/* EDIT MODAL */}
+        {console.log("PREVIEW STATE:", preview)}
         {editing && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -571,9 +611,8 @@ export default function ParentCategoryBannerTable() {
                     type="text"
                     value={form.title}
                     onChange={e => setForm({ ...form, title: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl border ${
-                      formErrors.title ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
-                    } transition-all duration-200 outline-none`}
+                    className={`w-full px-4 py-3 rounded-xl border ${formErrors.title ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
+                      } transition-all duration-200 outline-none`}
                     placeholder="Enter banner title"
                   />
                   {formErrors.title && (
@@ -605,15 +644,24 @@ export default function ParentCategoryBannerTable() {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Parent Category <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={form.parentCategory}
-                    onChange={e => setForm({ ...form, parentCategory: e.target.value })}
-                    className={`w-full px-4 py-3 rounded-xl border ${
-                      formErrors.parentCategory ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'
-                    } transition-all duration-200 outline-none`}
-                    placeholder="Enter parent category"
-                  />
+                    onChange={(e) =>
+                      setForm({ ...form, parentCategory: e.target.value })
+                    }
+                    className={`w-full px-4 py-3 rounded-xl border ${formErrors.parentCategory
+                      ? "border-red-500 ring-1 ring-red-500"
+                      : "border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      } outline-none`}
+                  >
+                    <option value="">Select Parent Category</option>
+
+                    {parentCategories.map((cat) => (
+                      <option key={cat._id} value={cat.categoryname}>
+                        {cat.categoryname}
+                      </option>
+                    ))}
+                  </select>
                   {formErrors.parentCategory && (
                     <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -646,59 +694,38 @@ export default function ParentCategoryBannerTable() {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Banner Image
                   </label>
-                  
-                  {!preview ? (
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200">
-                      <div className="text-center">
-                        <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H8a4 4 0 01-4-4V12a4 4 0 014-4h12m16 0h4m-4-4v4m0 0h-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <div className="mt-4 flex text-sm text-slate-600 justify-center">
-                          <label htmlFor="modal-file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
-                            <span>Upload new image</span>
-                            <input
-                              id="modal-file-upload"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              className="sr-only"
-                            />
-                          </label>
-                          <p className="pl-1">or drag and drop</p>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2">PNG, JPG, GIF up to 5MB</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative rounded-xl overflow-hidden border border-slate-200 group">
+
+                  {preview && (
+                    <div className="relative rounded-xl overflow-hidden border border-slate-200 mb-3">
                       <img
                         src={preview}
                         alt="Preview"
                         className="w-full h-48 object-contain bg-slate-50"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPreview(null);
-                            setForm({ ...form, bannerImage: null });
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100 transition-all duration-200 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Remove
-                        </button>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreview(null);
+                          setForm({ ...form, bannerImage: null });
+                        }}
+                        className="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded"
+                      >
+                        Remove
+                      </button>
                     </div>
                   )}
-                  
+
+                  {/* Always show file input */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="mt-2"
+                  />
+
                   {formErrors.bannerImage && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
+                    <p className="mt-2 text-sm text-red-600">
                       {formErrors.bannerImage}
                     </p>
                   )}

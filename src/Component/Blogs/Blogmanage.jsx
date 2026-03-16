@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import ApiClient from "../../middleware/ApiClient";
 import {
   FiPlus,
   FiEdit,
@@ -23,7 +23,6 @@ import {
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
-const API_URL = import.meta.env.VITE_LOCAL_API || 'http://localhost:8080/api';
 
 const Blogmanage = () => {
   const [blogs, setBlogs] = useState([]);
@@ -64,8 +63,15 @@ const Blogmanage = () => {
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}api/blog/get-all`);
-      if (response.data.success) {
+      const response = await ApiClient(
+        "GET",
+        "api/admin/blog/get-all"
+      );
+
+      if (response.success) {
+        setBlogs(response.data || []);
+        setTotalPages(Math.ceil((response.data?.length || 0) / 8));
+      } if (response.data.success) {
         setBlogs(response.data.data || []);
         setTotalPages(Math.ceil((response.data.data?.length || 0) / 8));
       }
@@ -249,39 +255,21 @@ const Blogmanage = () => {
 
       if (editingBlog) {
         // -------- UPDATE BLOG --------
-        response = await axios.put(
-          `${API_URL}api/blog/update/${editingBlog._id}`,
+        response = await ApiClient(
+          "PUT",
+          `api/admin/blog/update/${editingBlog._id}`,
           formDataToSend,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-            onUploadProgress: (progressEvent) => {
-              const progress = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setUploadProgress(progress);
-            },
-          }
+          { withauth: true }
         );
 
         showSnackbar('Blog updated successfully', 'success');
       } else {
         // -------- CREATE BLOG --------
-        response = await axios.post(
-          `${API_URL}api/blog/create`,
+        response = await ApiClient(
+          "POST",
+          "api/admin/blog/create",
           formDataToSend,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-            onUploadProgress: (progressEvent) => {
-              const progress = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setUploadProgress(progress);
-            },
-          }
+          { withauth: true }
         );
 
         showSnackbar('Blog created successfully', 'success');
@@ -327,7 +315,12 @@ const Blogmanage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this blog?')) {
       try {
-        await axios.delete(`${API_URL}api/blog/delete/${id}`);
+        await ApiClient(
+          "DELETE",
+          `api/admin/blog/delete/${id}`,
+          null,
+          { withauth: true }
+        );
         showSnackbar('Blog deleted successfully', 'success');
         fetchBlogs();
       } catch (error) {

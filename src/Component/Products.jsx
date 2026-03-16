@@ -70,7 +70,7 @@ export default function ProductTable() {
     const fetchAllProducts = async () => {
         try {
             setLoading(true);
-            const response = await ApiClient("GET", "api/product/allproducts");
+            const response = await ApiClient("GET", "api/admin/product/allproducts");
             if (response.success || response.sucess) {
                 setProducts(response?.allproducts || []);
             }
@@ -95,7 +95,7 @@ export default function ProductTable() {
 
         try {
             setDeletingProductId(productId);
-            const response = await ApiClient("DELETE", `api/product/delete/${productId}`);
+            const response = await ApiClient("DELETE", `api/admin/product/delete/${productId}`);
             if (response.success) {
                 alert("Product deleted successfully");
                 fetchAllProducts();
@@ -453,7 +453,7 @@ export default function ProductTable() {
 
             const response = await ApiClient(
                 "GET",
-                `api/product/single-product/${encodeURIComponent(parentCategory)}/${encodeURIComponent(subCategory)}`
+                `api/admin/product/single-product/${encodeURIComponent(parentCategory)}/${encodeURIComponent(subCategory)}`
             );
 
             if (response.success) {
