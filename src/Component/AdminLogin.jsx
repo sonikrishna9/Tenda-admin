@@ -19,13 +19,19 @@ export default function AdminLogin() {
         password
       });
 
+      const token = res.data.token;
+
+      /* COOKIE SET IN BROWSER */
+
+      document.cookie = `adminToken=${token}; path=/; max-age=86400`;
+
       alert("Login Successful");
 
       window.location.href = "/products";
 
     } catch (error) {
 
-      alert(error.response?.data?.message);
+      alert(error.response?.data?.message || "Login failed");
 
     }
 
@@ -36,7 +42,6 @@ export default function AdminLogin() {
 
       <div className="bg-white rounded-2xl shadow-2xl p-10 w-[380px]">
 
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <img
             src="/logo.png"
@@ -51,7 +56,6 @@ export default function AdminLogin() {
 
         <form onSubmit={handleLogin} className="space-y-4">
 
-          {/* Email */}
           <input
             type="email"
             placeholder="Email Address"
@@ -61,7 +65,6 @@ export default function AdminLogin() {
             required
           />
 
-          {/* Password */}
           <div className="relative">
 
             <input
@@ -83,7 +86,6 @@ export default function AdminLogin() {
 
           </div>
 
-          {/* Login Button */}
           <button
             type="submit"
             className="w-full bg-orange-600 hover:bg-orange-700 transition text-white font-semibold py-3 rounded-lg shadow-md"

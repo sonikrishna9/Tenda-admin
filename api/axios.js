@@ -1,8 +1,23 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: `${import.meta.env.VITE_LOCAL_API}api/`,
-    withCredentials: true
+    baseURL: `${import.meta.env.VITE_LOCAL_API}api/`
+});
+
+/* REQUEST INTERCEPTOR */
+
+api.interceptors.request.use((config) => {
+
+    const token = document.cookie
+        .split("; ")
+        .find(row => row.startsWith("adminToken="))
+        ?.split("=")[1];
+
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
 });
 
 export default api;
