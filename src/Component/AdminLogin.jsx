@@ -1,40 +1,41 @@
 import React, { useState } from "react";
 import api from "../../api/axios";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import toast from "react-hot-toast";
 
 export default function AdminLogin() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
-
     e.preventDefault();
 
-    try {
+    if (loading) return; // prevent multiple clicks
 
+    setLoading(true);
+
+    try {
       const res = await api.post("/admin/login", {
         email,
-        password
+        password,
       });
 
       const token = res.data.token;
 
-      /* COOKIE SET IN BROWSER */
-
       document.cookie = `adminToken=${token}; path=/; max-age=86400`;
 
-      alert("Login Successful");
+      toast.success("Login Successful");
 
       window.location.href = "/products";
 
     } catch (error) {
-
-      alert(error.response?.data?.message || "Login failed");
-
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
-
   };
 
   return (
@@ -88,9 +89,19 @@ export default function AdminLogin() {
 
           <button
             type="submit"
-            className="w-full bg-orange-600 hover:bg-orange-700 transition text-white font-semibold py-3 rounded-lg shadow-md"
+            disabled={loading}
+            className={`cursor-pointer w-full flex items-center justify-center gap-2 
+    ${loading ? "bg-orange-400 cursor-not-allowed" : "bg-orange-600 hover:bg-orange-700"} 
+    text-white font-semibold py-3 rounded-lg shadow-md transition`}
           >
-            Login
+            {loading ? (
+              <>
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                Logging in...
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
 
         </form>

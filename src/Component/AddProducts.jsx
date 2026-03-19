@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ApiClient from "../middleware/ApiClient";
 import {
@@ -31,7 +31,7 @@ const AddProduct = () => {
 
 
 
-
+    const [parentCategories, setParentCategories] = useState([]);
     const [images, setImages] = useState([]);
     const [newImagePreviews, setNewImagePreviews] = useState([]);
 
@@ -118,13 +118,32 @@ const AddProduct = () => {
         ]);
     };
 
+    useEffect(() => {
+        const fetchParentCategories = async () => {
+            try {
+                const res = await ApiClient("GET", "api/admin/parentcategory/getall");
+
+                if (res.success) {
+                    setParentCategories(res.parentcategory);
+                }
+            } catch (err) {
+                console.error("Failed to fetch parent categories", err);
+            }
+        };
+
+        fetchParentCategories();
+    }, []);
+
 
     useEffect(() => {
         const fetchCompanies = async () => {
             try {
                 const res = await ApiClient("GET", "api/company");
+
+                console.log("COMPANY API:", res); // 🔍 DEBUG
+
                 if (res.success) {
-                    setCompanies(res.companies);
+                    setCompanies(res.companies || []);
                 }
             } catch (err) {
                 console.error("Failed to fetch companies", err);
@@ -234,6 +253,21 @@ const AddProduct = () => {
         ]);
     };
 
+    useEffect(() => {
+        const fetchCompanies = async () => {
+            try {
+                const res = await ApiClient("GET", "api/company");
+
+                if (res.success) {
+                    setCompanies(res.companies || []); // ✅ safety
+                }
+            } catch (err) {
+                console.error("Failed to fetch companies", err);
+            }
+        };
+
+        fetchCompanies();
+    }, []);
 
     const toggleParameter = (i) => {
         setParameters((p) =>
@@ -437,11 +471,12 @@ const AddProduct = () => {
                                         Parent Category
                                     </label>
                                     <input
+                                        type="text"
                                         name="parentCategory"
                                         value={form.parentCategory}
                                         onChange={handleChange}
+                                        placeholder="Enter Parent Category (e.g. Router)"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        placeholder="Parent category"
                                     />
                                 </div>
 
@@ -507,9 +542,10 @@ const AddProduct = () => {
                                     <div key={img.public_id} className="relative group">
                                         <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 group-hover:border-blue-300 transition">
                                             <img
-                                                src={img.url}
-                                                alt="Product"
+                                                src={img.url || URL.createObjectURL(img)}
+                                                alt=""
                                                 className="w-full h-full object-cover"
+                                                onError={(e) => (e.target.style.display = "none")}
                                             />
                                             {/* View Button for Images */}
                                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -598,7 +634,7 @@ const AddProduct = () => {
                             </h3>
 
                             <button
-                                type="button"
+                                type="button"   // ✅ MUST
                                 onClick={addBuyLink}
                                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
                             >
@@ -616,7 +652,6 @@ const AddProduct = () => {
                                     key={item.id}
                                     className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white border rounded-lg p-4"
                                 >
-                                    {/* COMPANY NAME */}
                                     {/* COMPANY DROPDOWN */}
                                     <select
                                         value={item.companyname}
@@ -627,14 +662,14 @@ const AddProduct = () => {
                                     >
                                         <option value="">Select Company</option>
 
-                                        {companies.map((company) => (
+                                        {(companies || []).map((company) => (
                                             <option key={company._id} value={company.companyName}>
                                                 {company.companyName}
                                             </option>
                                         ))}
                                     </select>
 
-                                    {/* COMPANY LOGO PREVIEW */}
+                                    {/* LOGO */}
                                     <div className="flex items-center justify-center border rounded-lg p-2 bg-gray-50">
                                         {item.image ? (
                                             <img
@@ -647,9 +682,7 @@ const AddProduct = () => {
                                         )}
                                     </div>
 
-                                    
-
-                                    {/* PRODUCT LINK */}
+                                    {/* LINK */}
                                     <input
                                         type="text"
                                         placeholder="Product Link"
@@ -672,7 +705,6 @@ const AddProduct = () => {
                             ))}
                         </div>
                     </div>
-
                     {/* PARAMETERS SECTION */}
                     <div className="bg-gradient-to-r from-gray-50 to-slate-100 p-6 rounded-xl border border-gray-200">
                         <div className="flex items-center justify-between mb-6">
@@ -817,9 +849,10 @@ const AddProduct = () => {
                                     <div key={img.public_id} className="relative group">
                                         <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200 group-hover:border-blue-300 transition">
                                             <img
-                                                src={img.url}
-                                                alt="Feature"
+                                                src={img.url || URL.createObjectURL(img)}
+                                                alt=""
                                                 className="w-full h-full object-cover"
+                                                onError={(e) => (e.target.style.display = "none")}
                                             />
 
                                             {/* VIEW BUTTON */}

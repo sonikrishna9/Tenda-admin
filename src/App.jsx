@@ -20,6 +20,7 @@ import CompanyManager from "./Component/CompanyManager";
 import ResetPassword from "./Component/ResetPassword";
 import AdminLogin from "./Component/AdminLogin";
 import { Toaster } from "react-hot-toast";
+import Video from "./Component/Video";
 
 
 function AdminLayout() {
@@ -46,6 +47,7 @@ function AdminLayout() {
           <Route path="/addnews" element={<AddNewsForm />} />
           <Route path="/newstable" element={<NewsTable />} />
           <Route path="/company" element={<CompanyManager />} />
+          <Route path="/video" element={<Video/>} />
         </Routes>
       </div>
     </div>

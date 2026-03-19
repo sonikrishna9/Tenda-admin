@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import ApiClient from "../middleware/ApiClient";
+import toast from "react-hot-toast";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FiLogOut,
@@ -64,7 +66,31 @@ export default function Sidebar() {
       icon: <FiLayers size={20} />,
       path: "/company",
     },
+    {
+      label: "Video",
+      icon: <FiLayers size={20} />,
+      path: "/video",
+    },
   ];
+
+  const handleLogout = async () => {
+    try {
+      const res = await ApiClient("POST", "api/admin/logout");
+
+      toast.success(res.message || "Logout successful"); // 🔥
+
+      localStorage.clear();
+      sessionStorage.clear();
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1000); // thoda delay for UX
+
+    } catch (error) {
+      console.log(error);
+      toast.error("Logout failed");
+    }
+  };
 
   return (
     <>
@@ -92,10 +118,10 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 px-6 py-6 border-b">
           <div className="w-32 h-20 text-white rounded-xl flex items-center justify-center font-bold">
-            <img src={"/logo.png"}/>
+            <img src={"/logo.png"} />
           </div>
 
-          
+
         </div>
 
         {/* Menu */}
@@ -107,10 +133,9 @@ export default function Sidebar() {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition
-                ${
-                  isActive
-                    ? "bg-blue-600 text-white shadow"
-                    : "hover:bg-blue-50 text-gray-700"
+                ${isActive
+                  ? "bg-blue-600 text-white shadow"
+                  : "hover:bg-blue-50 text-gray-700"
                 }`
               }
             >
@@ -130,12 +155,12 @@ export default function Sidebar() {
           {!collapsed && (
             <div className="flex-1 flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium">Admin User</p>
-                <p className="text-xs text-gray-500">admin@example.com</p>
+                <p className="text-sm font-medium">Admin User Logout</p>
+                {/* <p className="text-xs text-gray-500">admin@example.com</p> */}
               </div>
 
               <button
-                onClick={() => navigate("/login")}
+                onClick={handleLogout}
                 className="p-2 hover:bg-blue-50 rounded-lg text-blue-600"
               >
                 <FiLogOut />
