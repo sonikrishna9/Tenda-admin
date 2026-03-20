@@ -3,19 +3,26 @@
 import React, { useEffect, useState } from "react";
 import ApiClient from "../middleware/ApiClient";
 
-export default function Video() {
+export default function VideoManager() {
   const [slug, setSlug] = useState("");
   const [videos, setVideos] = useState([""]);
   const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+
+  const BASE_URL = import.meta.env.VITE_LOCAL_API;
 
   /* ================= FETCH ALL ================= */
 
   const fetchAll = async () => {
     try {
-      const res = await ApiClient("GET", "api/videos/getall");
-      setList(res.data);
+      setLoading(true);
+      const res = await ApiClient("GET", "api/admin/videos");
+      setList(res.data); // ✅ correct
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -26,9 +33,11 @@ export default function Video() {
   /* ================= INPUT HANDLING ================= */
 
   const handleChange = (index, value) => {
-    const updated = [...videos];
-    updated[index] = value;
-    setVideos(updated);
+    setVideos((prev) => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
   };
 
   const addField = () => {
@@ -37,41 +46,54 @@ export default function Video() {
   };
 
   const removeField = (index) => {
-    setVideos(videos.filter((_, i) => i !== index));
+    const updated = videos.filter((_, i) => i !== index);
+    setVideos(updated.length ? updated : [""]);
   };
 
-  /* ================= SAVE ================= */
+  /* ================= SAVE / UPDATE ================= */
 
   const handleSubmit = async () => {
     try {
-      if (!slug) return alert("Slug is required");
+      if (!slug.trim()) return alert("Slug is required");
 
-      const cleanVideos = videos.filter((v) => v.trim());
+      const cleanVideos = videos
+        .map((v) => v.trim())
+        .filter((v) => v !== "");
 
-      await ApiClient("POST", "api/videos/create", {
+      if (cleanVideos.length === 0) {
+        return alert("At least one video required");
+      }
+
+      if (cleanVideos.length > 12) {
+        return alert("Max 12 videos allowed");
+      }
+
+      setLoading(true);
+
+      await ApiClient("POST", "api/admin/videos", {
         slug,
         videos: cleanVideos,
       });
 
-      alert("Saved ✅");
+      alert(isEdit ? "Updated ✅" : "Saved ✅");
 
       setSlug("");
       setVideos([""]);
+      setIsEdit(false);
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.message || "Error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ================= FETCH BY SLUG ================= */
+  /* ================= EDIT ================= */
 
-  const handleFetchBySlug = async () => {
-    try {
-      const res = await ApiClient("GET", `api/videos/getall/${slug}`);
-      setVideos(res.data.data.videos);
-    } catch {
-      alert("No data found");
-    }
+  const handleEdit = (item) => {
+    setSlug(item.slug);
+    setVideos(item.videos);
+    setIsEdit(true);
   };
 
   /* ================= DELETE ================= */
@@ -79,8 +101,26 @@ export default function Video() {
   const handleDelete = async (slug) => {
     if (!window.confirm("Delete this?")) return;
 
-    await ApiClient("DELETE", `api/videos/delete/${slug}`);
-    fetchAll();
+    try {
+      setLoading(true);
+      await ApiClient(
+        "DELETE",
+        `api/admin/videos/${encodeURIComponent(slug)}`
+      );
+      fetchAll();
+    } catch (err) {
+      alert("Delete failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= COPY URL ================= */
+
+  const copyUrl = (slug) => {
+    const url = `${BASE_URL}api/videos/${encodeURIComponent(slug)}`;
+    navigator.clipboard.writeText(url);
+    alert("Copied URL ✅");
   };
 
   /* ================= UI ================= */
@@ -102,13 +142,6 @@ export default function Video() {
             onChange={(e) => setSlug(e.target.value)}
             className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-
-          <button
-            onClick={handleFetchBySlug}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-          >
-            Fetch
-          </button>
         </div>
 
         {/* VIDEO INPUTS */}
@@ -146,9 +179,14 @@ export default function Video() {
 
           <button
             onClick={handleSubmit}
-            className="bg-green-500 text-white px-5 py-2 rounded-lg hover:bg-green-600"
+            disabled={loading}
+            className="bg-green-500 text-white px-5 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50"
           >
-            💾 Save
+            {loading
+              ? "Saving..."
+              : isEdit
+              ? "✏️ Update"
+              : "💾 Save"}
           </button>
         </div>
 
@@ -157,25 +195,47 @@ export default function Video() {
         {/* ALL DATA */}
         <h3 className="text-lg font-semibold mb-3">All Pages</h3>
 
+        {loading && <p className="text-gray-500">Loading...</p>}
+
         <div className="grid md:grid-cols-2 gap-4">
           {list?.map((item) => (
             <div
               key={item._id}
               className="border rounded-xl p-4 shadow-sm bg-gray-50"
             >
+              {/* HEADER */}
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-blue-600">
-                  {item.slug}
-                </h4>
+                <div>
+                  <h4 className="font-semibold text-blue-600">
+                    {item.slug}
+                  </h4>
 
-                <button
-                  onClick={() => handleDelete(item.slug)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  Delete
-                </button>
+                  {/* API URL */}
+                  <p className="text-xs text-gray-500 break-all">
+                    {`${BASE_URL}api/videos/${encodeURIComponent(
+                      item.slug
+                    )}`}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="text-blue-500 hover:text-blue-700"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(item.slug)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
+              {/* VIDEOS */}
               <div className="space-y-1 text-sm text-gray-700">
                 {item.videos.map((v, i) => (
                   <p key={i} className="truncate">
@@ -183,6 +243,14 @@ export default function Video() {
                   </p>
                 ))}
               </div>
+
+              {/* COPY BUTTON */}
+              <button
+                onClick={() => copyUrl(item.slug)}
+                className="mt-2 text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+              >
+                Copy API URL
+              </button>
             </div>
           ))}
         </div>
