@@ -31,7 +31,9 @@ const AddProduct = () => {
 
 
 
-    const [parentCategories, setParentCategories] = useState([]);
+    const [wholedata, setwholedata] = useState([]);
+    const [wholeparentcategory, setwholeparentcategory] = useState([])
+    const [wholesubcategory, setwholesubcategory] = useState([])
     const [images, setImages] = useState([]);
     const [newImagePreviews, setNewImagePreviews] = useState([]);
 
@@ -74,7 +76,19 @@ const AddProduct = () => {
     /* ---------------- BASIC HANDLERS ---------------- */
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm((p) => ({ ...p, [name]: value }));
+
+        if (name === "parentCategory") {
+            setForm(prev => ({
+                ...prev,
+                parentCategory: value,
+                subCategory: "" // reset
+            }));
+        } else {
+            setForm(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
     };
 
     /* ---------------- IMAGE ---------------- */
@@ -97,6 +111,13 @@ const AddProduct = () => {
             setNewImagePreviews((p) => p.filter((i) => i.id !== id));
         }
     };
+
+
+    // console.log(parentCategories,"Parent Category")
+
+
+
+    console.log(wholesubcategory, "wholeparentcateogry")
 
 
     /* ---------------- BUY LINKS ---------------- */
@@ -124,7 +145,8 @@ const AddProduct = () => {
                 const res = await ApiClient("GET", "api/admin/parentcategory/getall");
 
                 if (res.success) {
-                    setParentCategories(res.parentcategory);
+
+                    setwholedata(res.parentcategory);
                 }
             } catch (err) {
                 console.error("Failed to fetch parent categories", err);
@@ -470,27 +492,42 @@ const AddProduct = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Parent Category
                                     </label>
-                                    <input
-                                        type="text"
+                                    <select
                                         name="parentCategory"
                                         value={form.parentCategory}
                                         onChange={handleChange}
-                                        placeholder="Enter Parent Category (e.g. Router)"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                    />
+                                    >
+                                        <option value="">Select Parent Category</option>
+
+                                        {wholedata.map((item) => (
+                                            <option key={item._id} value={item.categoryname}>
+                                                {item.categoryname}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Sub Category
                                     </label>
-                                    <input
+                                    <select
                                         name="subCategory"
                                         value={form.subCategory}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        placeholder="Sub category"
-                                    />
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                                    >
+                                        <option value="">Select Sub Category</option>
+
+                                        {wholedata
+                                            .find(item => item.categoryname === form.parentCategory)
+                                            ?.subcategories?.map((sub) => (
+                                                <option key={sub._id} value={sub.name}>
+                                                    {sub.name}
+                                                </option>
+                                            ))}
+                                    </select>
                                 </div>
 
                                 <div>

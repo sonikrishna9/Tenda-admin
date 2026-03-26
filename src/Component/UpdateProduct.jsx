@@ -21,6 +21,7 @@ const UpdateProduct = () => {
   });
 
   /* ---------------- MEDIA STATE ---------------- */
+  const [categories, setCategories] = useState([]);
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const [pdfs, setPdfs] = useState({ quickstartpdf: [], downloadpdf: [] });
@@ -91,6 +92,22 @@ const UpdateProduct = () => {
 
     }
   }, [product]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await ApiClient("GET", "api/admin/parentcategory/getall");
+
+        if (res.success) {
+          setCategories(res.parentcategory); // ✅ correct key
+        }
+      } catch (err) {
+        console.error("Category fetch error", err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -573,26 +590,42 @@ const UpdateProduct = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Parent Category
                   </label>
-                  <input
+                  <select
                     name="parentCategory"
                     value={form.parentCategory}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="Parent category"
-                  />
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select Parent Category</option>
+
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat.categoryname}>
+                        {cat.categoryname}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sub Category
                   </label>
-                  <input
+                  <select
                     name="subCategory"
                     value={form.subCategory}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="Sub category"
-                  />
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Select Sub Category</option>
+
+                    {categories
+                      .find(cat => cat.categoryname === form.parentCategory)
+                      ?.subcategories?.map((sub) => (
+                        <option key={sub._id} value={sub.name}>
+                          {sub.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
 
                 <div>

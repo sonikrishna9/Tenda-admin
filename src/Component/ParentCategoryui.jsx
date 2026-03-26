@@ -31,7 +31,8 @@ const ParentCategoryui = () => {
   const [formData, setFormData] = useState({
     categoryname: '',
     image: null,
-    imagePreview: null
+    imagePreview: null,
+    subcategories: [""]
   });
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -104,8 +105,26 @@ const ParentCategoryui = () => {
       const formDataToSend = new FormData();
       formDataToSend.append("categoryname", formData.categoryname);
 
+      formDataToSend.append(
+        "subcategories",
+        JSON.stringify(
+          formData.subcategories.filter(item => item.trim() !== "")
+        )
+      );
+
       if (formData.image) {
         formDataToSend.append("images", formData.image);
+      } else if (editingCategory && formData.imagePreview) {
+
+        // OLD IMAGE → FILE में convert
+        const response = await fetch(formData.imagePreview);
+        const blob = await response.blob();
+
+        const file = new File([blob], "old-image.jpg", {
+          type: blob.type,
+        });
+
+        formDataToSend.append("images", file);
       }
 
       if (editingCategory) {
@@ -152,11 +171,14 @@ const ParentCategoryui = () => {
   // Handle edit category
   const handleEdit = (category) => {
     setEditingCategory(category);
+
     setFormData({
       categoryname: category.categoryname,
       image: null,
-      imagePreview: category.images.url
+      imagePreview: category.images.url,
+      subcategories: category.subcategories?.map(s => s.name) || [""]
     });
+
     setOpenDialog(true);
   };
 
@@ -216,11 +238,14 @@ const ParentCategoryui = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingCategory(null);
+
     setFormData({
       categoryname: '',
       image: null,
-      imagePreview: null
+      imagePreview: null,
+      subcategories: [""] // ✅ ADD THIS
     });
+
     setUploadProgress(0);
   };
 
@@ -259,16 +284,7 @@ const ParentCategoryui = () => {
             Parent Categories Management
           </h1>
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search categories..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
-              />
-            </div> */}
+
             <button
               onClick={fetchCategories}
               className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
@@ -286,7 +302,7 @@ const ParentCategoryui = () => {
         </div>
 
 
-      
+
       </div>
 
       {/* Categories Table */}
@@ -297,6 +313,7 @@ const ParentCategoryui = () => {
               <tr className="bg-blue-600 text-white">
                 <th className="py-3 px-4 text-left font-semibold">Image</th>
                 <th className="py-3 px-4 text-left font-semibold">Parent Category Name</th>
+                <th className="py-3 px-4 text-left font-semibold">Sub Category Name</th>
                 <th className="py-3 px-4 text-left font-semibold">Status</th>
                 <th className="py-3 px-4 text-left font-semibold">Created At</th>
                 <th className="py-3 px-4 text-left font-semibold">Actions</th>
@@ -333,6 +350,13 @@ const ParentCategoryui = () => {
                       <div className="font-medium text-gray-800">
                         {category.categoryname}
                       </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {category.subcategories?.map((s, i) => (
+                        <span key={i} className="text-xs bg-gray-200 px-2 py-1 mr-1 rounded">
+                          {s.name}
+                        </span>
+                      ))}
                     </td>
                     <td className="py-3 px-4">
                       <button
@@ -482,7 +506,7 @@ const ParentCategoryui = () => {
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <label className="block text-gray-700 text-sm font-medium mb-2">
-                   Parent Category Name
+                    Parent Category Name
                   </label>
                   <input
                     type="text"
@@ -493,6 +517,54 @@ const ParentCategoryui = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter category name"
                   />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    Sub Categories *
+                  </label>
+
+                  {formData.subcategories.map((sub, index) => (
+                    <div key={index} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={sub}
+                        onChange={(e) => {
+                          const updated = [...formData.subcategories];
+                          updated[index] = e.target.value;
+                          setFormData(prev => ({ ...prev, subcategories: updated }));
+                        }}
+                        placeholder="Enter subcategory"
+                        className="w-full px-3 py-2 border rounded-lg"
+                      />
+
+                      {/* REMOVE BUTTON */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.subcategories.filter((_, i) => i !== index);
+                          setFormData(prev => ({ ...prev, subcategories: updated }));
+                        }}
+                        className="px-3 bg-red-500 text-white rounded"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* ADD BUTTON */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        subcategories: [...prev.subcategories, ""]
+                      }))
+                    }
+                    className="text-blue-600 text-sm mt-1"
+                  >
+                    + Add Subcategory
+                  </button>
                 </div>
 
                 <div className="mb-4">
