@@ -32,7 +32,8 @@ const ParentCategoryui = () => {
     categoryname: '',
     image: null,
     imagePreview: null,
-    subcategories: [""]
+    subcategories: [""],
+    status: null
   });
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -112,6 +113,11 @@ const ParentCategoryui = () => {
         )
       );
 
+      formDataToSend.append(
+        "status",
+        formData.status !== null ? formData.status : true
+      );
+      
       if (formData.image) {
         formDataToSend.append("images", formData.image);
       } else if (editingCategory && formData.imagePreview) {
@@ -176,7 +182,8 @@ const ParentCategoryui = () => {
       categoryname: category.categoryname,
       image: null,
       imagePreview: category.images.url,
-      subcategories: category.subcategories?.map(s => s.name) || [""]
+      subcategories: category.subcategories?.map(s => s.name) || [""],
+      status: category.status
     });
 
     setOpenDialog(true);
@@ -243,7 +250,8 @@ const ParentCategoryui = () => {
       categoryname: '',
       image: null,
       imagePreview: null,
-      subcategories: [""] // ✅ ADD THIS
+      subcategories: [""],
+      status: null
     });
 
     setUploadProgress(0);
@@ -517,6 +525,35 @@ const ParentCategoryui = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter category name"
                   />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    Status
+                  </label>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, status: true }))}
+                      className={`px-4 py-2 rounded-lg ${formData.status === true
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                        }`}
+                    >
+                      Active
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, status: false }))}
+                      className={`px-4 py-2 rounded-lg ${formData.status === false
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                        }`}
+                    >
+                      Inactive
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-4">
