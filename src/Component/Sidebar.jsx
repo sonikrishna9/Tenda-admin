@@ -71,6 +71,11 @@ export default function Sidebar() {
       icon: <FiLayers size={20} />,
       path: "/video",
     },
+    {
+      label: "Meta Seo",
+      icon: <FiLayers size={20} />,
+      path: "/seo",
+    },
   ];
 
   const handleLogout = async () => {

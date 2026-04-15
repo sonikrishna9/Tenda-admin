@@ -33,7 +33,12 @@ const ApiClient = async (method, url, data = null) => {
       method,
       url: `${baseurl}${url}`,
       headers,
-      ...(method === "GET" ? { params: data } : { data })
+      ...(method === "GET"
+        ? { params: data }
+        : method === "DELETE"
+          ? {} // 🔥 NO BODY FOR DELETE
+          : { data }
+      )
     });
 
     return response.data;

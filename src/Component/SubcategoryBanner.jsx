@@ -6,7 +6,7 @@ import ApiClient from "../middleware/ApiClient";
 
 export default function SubcategoryBanner() {
   const navigate = useNavigate();
-  const [FilterSubcategories, setFilterSubcategories] = useState([]);
+  // const [FilterSubcategories, setFilterSubcategories] = useState([]);
   const [parentCategories, setParentCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -73,63 +73,89 @@ export default function SubcategoryBanner() {
   };
 
   /* ================= FETCH ================= */
-  const fetchProducts = useCallback(async () => {
+  // const fetchProducts = useCallback(async () => {
+  //   try {
+  //     setLoading(true);
+
+  //     const result = await ApiClient(
+  //       "GET",
+  //       "api/admin/product/all-categories"
+  //     );
+
+  //     const arr = result?.allproducts || [];
+
+  //     if (Array.isArray(arr)) {
+  //       const subs = [];
+  //       const parents = [];
+
+  //       for (const item of arr) {
+  //         if (item?.subCategory && !subs.includes(item.subCategory)) {
+  //           subs.push(item.subCategory);
+  //         }
+  //         if (item?.parentCategory && !parents.includes(item.parentCategory)) {
+  //           parents.push(item.parentCategory);
+  //         }
+  //       }
+
+  //       setFilterSubcategories(subs);
+  //       setParentCategories(parents);
+  //     }
+
+  //   } catch (err) {
+  //     console.error("Failed to fetch products", err);
+  //     alert("Failed to load categories. Please refresh the page.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   fetchProducts();
+  // }, [fetchProducts]);
+
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
 
-      const result = await ApiClient(
+      const res = await ApiClient(
         "GET",
-        "api/admin/product/all-categories"
+        "api/admin/parentcategory/getall"
       );
 
-      const arr = result?.allproducts || [];
-
-      if (Array.isArray(arr)) {
-        const subs = [];
-        const parents = [];
-
-        for (const item of arr) {
-          if (item?.subCategory && !subs.includes(item.subCategory)) {
-            subs.push(item.subCategory);
-          }
-          if (item?.parentCategory && !parents.includes(item.parentCategory)) {
-            parents.push(item.parentCategory);
-          }
-        }
-
-        setFilterSubcategories(subs);
-        setParentCategories(parents);
+      if (res.success) {
+        setParentCategories(res.parentcategory || []);
       }
 
     } catch (err) {
-      console.error("Failed to fetch products", err);
-      alert("Failed to load categories. Please refresh the page.");
+      console.error("Failed to fetch categories", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchCategories();
+  }, [fetchCategories]);
 
   /* ================= HANDLERS ================= */
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
 
-    // Mark field as touched
-    setTouched(prev => ({ ...prev, [name]: true }));
-
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+    if (name === "parentCategory") {
+      setForm(prev => ({
+        ...prev,
+        parentCategory: value,
+        subCategory: "" // reset
+      }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
+
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handleBlur = (e) => {
@@ -424,15 +450,13 @@ export default function SubcategoryBanner() {
                       name="parentCategory"
                       value={form.parentCategory}
                       onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={`w-full px-4 py-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:outline-none transition ${errors.parentCategory && touched.parentCategory
-                        ? 'border-red-500 focus:ring-red-200'
-                        : 'border-gray-300 focus:ring-blue-500'
-                        }`}
                     >
                       <option value="">Select parent category</option>
-                      {parentCategories.map(p => (
-                        <option key={p} value={p}>{p}</option>
+
+                      {parentCategories.map((item) => (
+                        <option key={item._id} value={item.categoryname}>
+                          {item.categoryname}
+                        </option>
                       ))}
                     </select>
                     {errors.parentCategory && touched.parentCategory && (
@@ -449,18 +473,17 @@ export default function SubcategoryBanner() {
                       name="subCategory"
                       value={form.subCategory}
                       onChange={handleChange}
-                      onBlur={handleBlur}
                       disabled={!form.parentCategory}
-                      className={`w-full px-4 py-3 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:outline-none transition ${!form.parentCategory ? 'opacity-50 cursor-not-allowed' : ''
-                        } ${errors.subCategory && touched.subCategory
-                          ? 'border-red-500 focus:ring-red-200'
-                          : 'border-gray-300 focus:ring-blue-500'
-                        }`}
                     >
                       <option value="">Select subcategory</option>
-                      {FilterSubcategories.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
+
+                      {parentCategories
+                        .find((item) => item.categoryname === form.parentCategory)
+                        ?.subcategories?.map((sub) => (
+                          <option key={sub._id} value={sub.name}>
+                            {sub.name}
+                          </option>
+                        ))}
                     </select>
                     {errors.subCategory && touched.subCategory && (
                       <p className="text-red-500 text-xs mt-1">{errors.subCategory}</p>

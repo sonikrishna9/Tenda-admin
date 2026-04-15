@@ -19,6 +19,7 @@ import NewsTable from "./Component/News/NewsTable";
 import CompanyManager from "./Component/CompanyManager";
 import ResetPassword from "./Component/ResetPassword";
 import AdminLogin from "./Component/AdminLogin";
+import SeoAdmin from "./Component/SEO/SeoAdmin";
 import { Toaster } from "react-hot-toast";
 import Video from "./Component/Video";
 
@@ -48,6 +49,7 @@ function AdminLayout() {
           <Route path="/newstable" element={<NewsTable />} />
           <Route path="/company" element={<CompanyManager />} />
           <Route path="/video" element={<Video/>} />
+          <Route path="/seo" element={<SeoAdmin/>} />
         </Routes>
       </div>
     </div>

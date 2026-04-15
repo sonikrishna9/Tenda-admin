@@ -104,34 +104,32 @@ const ParentCategoryui = () => {
       setSubmitting(true);   // spinner start
 
       const formDataToSend = new FormData();
-      formDataToSend.append("categoryname", formData.categoryname);
 
-      formDataToSend.append(
-        "subcategories",
-        JSON.stringify(
-          formData.subcategories.filter(item => item.trim() !== "")
-        )
+      // ✅ Always append
+      formDataToSend.append("categoryname", formData.categoryname || "");
+
+      // ✅ Ensure subcategories always sent
+      const filteredSubs = (formData.subcategories || []).filter(
+        (item) => item && item.trim() !== ""
       );
 
+      formDataToSend.append("subcategories", JSON.stringify(filteredSubs));
+
+      // ✅ Status
       formDataToSend.append(
         "status",
         formData.status !== null ? formData.status : true
       );
-      
+
+      // ✅ Image
       if (formData.image) {
         formDataToSend.append("images", formData.image);
-      } else if (editingCategory && formData.imagePreview) {
-
-        // OLD IMAGE → FILE में convert
-        const response = await fetch(formData.imagePreview);
-        const blob = await response.blob();
-
-        const file = new File([blob], "old-image.jpg", {
-          type: blob.type,
-        });
-
-        formDataToSend.append("images", file);
       }
+
+      console.log(formData);
+      console.log(formData.image);
+      console.log(formData.subcategories)
+      console.log([...formDataToSend.entries()]);
 
       if (editingCategory) {
 
@@ -208,9 +206,12 @@ const ParentCategoryui = () => {
       fetchCategories();
 
     } catch (error) {
+      console.error("DELETE ERROR:", error);
 
-      showSnackbar("Error deleting category", "error");
-
+      showSnackbar(
+        error?.response?.data?.message || "Error deleting category",
+        "error"
+      );
     } finally {
 
       setDeletingId(null);
@@ -504,7 +505,7 @@ const ParentCategoryui = () => {
       {/* Create/Edit Dialog */}
       {openDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800">
                 {editingCategory ? 'Edit Parent Category' : 'Create New Parent Category'}
