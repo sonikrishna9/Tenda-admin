@@ -3,6 +3,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ApiClient from "../middleware/ApiClient";
 import { FiUpload, FiX, FiLoader, FiEye, FiTrash2, FiVideo, FiFile, FiImage } from "react-icons/fi";
 
+const getExistingMediaId = (item = {}) => {
+  if (!item || typeof item !== "object") return "";
+
+  if (item.path) return item.path;
+  if (item.public_id) return item.public_id;
+
+  if (typeof item.url === "string" && item.url) {
+    const cleanUrl = item.url.split("?")[0].split("#")[0];
+    return decodeURIComponent(cleanUrl.split("/").pop() || "");
+  }
+
+  return "";
+};
+
 const UpdateProduct = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -162,11 +176,15 @@ const UpdateProduct = () => {
     setNewFeaturePicturePreviews((prev) => [...prev, ...previews]);
   };
 
-  const removeFeaturePicture = (publicId) => {
+  const removeFeaturePicture = (fileId) => {
+    if (!fileId) return;
+
     setFeaturePictures((prev) =>
-      prev.filter((img) => img.public_id !== publicId)
+      prev.filter((img) => getExistingMediaId(img) !== fileId)
     );
-    setRemoveFeaturePictureIds((prev) => [...prev, publicId]);
+    setRemoveFeaturePictureIds((prev) =>
+      prev.includes(fileId) ? prev : [...prev, fileId]
+    );
   };
 
 
@@ -294,9 +312,15 @@ const UpdateProduct = () => {
   };
 
   /* ---------------- REMOVE HANDLERS ---------------- */
-  const removeImage = (publicId) => {
-    setImages((prev) => prev.filter((img) => img.public_id !== publicId));
-    setRemoveImageIds((prev) => [...prev, publicId]);
+  const removeImage = (fileId) => {
+    if (!fileId) return;
+
+    setImages((prev) =>
+      prev.filter((img) => getExistingMediaId(img) !== fileId)
+    );
+    setRemoveImageIds((prev) =>
+      prev.includes(fileId) ? prev : [...prev, fileId]
+    );
   };
 
   const removeNewImagePreview = (id) => {
@@ -312,8 +336,15 @@ const UpdateProduct = () => {
   };
 
   const removeVideo = (video) => {
-    setVideos((prev) => prev.filter((v) => v.path !== video.path));
-    setRemoveVideoIds((prev) => [...prev, video.path]);
+    const fileId = getExistingMediaId(video);
+    if (!fileId) return;
+
+    setVideos((prev) =>
+      prev.filter((v) => getExistingMediaId(v) !== fileId)
+    );
+    setRemoveVideoIds((prev) =>
+      prev.includes(fileId) ? prev : [...prev, fileId]
+    );
   };
 
 
@@ -337,24 +368,38 @@ const UpdateProduct = () => {
     });
   };
 
-  const removeQuickstartPdf = (index) => {
+  const removeQuickstartPdf = (pdf) => {
+    const fileId = getExistingMediaId(pdf);
+    if (!fileId) return;
+
     setPdfs(prev => ({
       ...prev,
-      quickstartpdf: prev.quickstartpdf.filter((_, i) => i !== index)
+      quickstartpdf: prev.quickstartpdf.filter(
+        (item) => getExistingMediaId(item) !== fileId
+      )
     }));
-    setRemoveQuickstartIds(prev => [...prev, index]);
+    setRemoveQuickstartIds(prev =>
+      prev.includes(fileId) ? prev : [...prev, fileId]
+    );
   };
 
   const removeNewQuickstartPdf = (index) => {
     setNewQuickstartPdfs(prev => prev.filter((_, i) => i !== index));
   };
 
-  const removeDownloadPdf = (index) => {
+  const removeDownloadPdf = (pdf) => {
+    const fileId = getExistingMediaId(pdf);
+    if (!fileId) return;
+
     setPdfs(prev => ({
       ...prev,
-      downloadpdf: prev.downloadpdf.filter((_, i) => i !== index)
+      downloadpdf: prev.downloadpdf.filter(
+        (item) => getExistingMediaId(item) !== fileId
+      )
     }));
-    setRemoveDownloadIds(prev => [...prev, index]);
+    setRemoveDownloadIds(prev =>
+      prev.includes(fileId) ? prev : [...prev, fileId]
+    );
   };
 
   const removeNewDownloadPdf = (index) => {
@@ -429,8 +474,8 @@ const UpdateProduct = () => {
     formData.append("removeImages", JSON.stringify(removeImageIds));
     formData.append("removeVideos", JSON.stringify(removeVideoIds));
     formData.append("parameters", JSON.stringify(parameters));
-    formData.append("removeQuickstartIndices", JSON.stringify(removeQuickstartIds));
-    formData.append("removeDownloadIndices", JSON.stringify(removeDownloadIds));
+    formData.append("removeQuickstartPdfs", JSON.stringify(removeQuickstartIds));
+    formData.append("removeDownloadPdfs", JSON.stringify(removeDownloadIds));
     formData.append(
       "removeFeaturePictures",
       JSON.stringify(removeFeaturePictureIds)
@@ -694,7 +739,7 @@ const UpdateProduct = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeImage(img.public_id)}
+                      onClick={() => removeImage(getExistingMediaId(img))}
                       className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
                     >
                       <FiX size={16} />
@@ -1004,7 +1049,7 @@ const UpdateProduct = () => {
                     {/* REMOVE */}
                     <button
                       type="button"
-                      onClick={() => removeFeaturePicture(img.public_id)}
+                      onClick={() => removeFeaturePicture(getExistingMediaId(img))}
                       className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
                     >
                       <FiX size={16} />
@@ -1134,7 +1179,7 @@ const UpdateProduct = () => {
                 <div>
                   <h4 className="font-medium text-gray-700 mb-3">New Videos to Upload</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {newVideoPreviews.map((video, index) => (
+                    {newVideoPreviews.map((video) => (
                       <div key={video.id} className="relative group">
                         <div className="bg-gray-800 rounded-lg overflow-hidden">
                           <div className="w-full h-48 flex items-center justify-center">
@@ -1245,7 +1290,7 @@ const UpdateProduct = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => removeQuickstartPdf(index)}
+                            onClick={() => removeQuickstartPdf(pdf)}
                             className="text-red-500 hover:text-red-700 p-1"
                             disabled={loading}
                             title="Remove PDF"
@@ -1371,7 +1416,7 @@ const UpdateProduct = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => removeDownloadPdf(index)}
+                            onClick={() => removeDownloadPdf(pdf)}
                             className="text-red-500 hover:text-red-700 p-1"
                             disabled={loading}
                             title="Remove PDF"

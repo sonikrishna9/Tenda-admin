@@ -44,22 +44,26 @@ export default function ProductTable() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [categoryOptions, setCategoryOptions] = useState([]);
+    const [summary, setSummary] = useState({
+        totalProducts: 0,
+        activeProducts: 0,
+    });
     const [viewingCategory, setViewingCategory] = useState(null);
-    const [categoryData, setCategoryData] = useState(null);
     const [loadingCategory, setLoadingCategory] = useState(false);
     const [deletingProductId, setDeletingProductId] = useState(null);
     const [viewingProductId, setViewingProductId] = useState(null);
-    const [productDetailsModal, setProductDetailsModal] = useState(null);
     const navigate = useNavigate();
 
     // Extract unique categories from products
-    const allCategories = [...new Set(products.map(p => p.parentCategory).filter(Boolean))];
-    const allSubCategories = [...new Set(products.map(p => p.subCategory).filter(Boolean))];
-
+    const allCategories = categoryOptions;
     const getStatusBadge = (status) => {
         if (status === "active") {
             return "bg-green-100 text-green-700 border border-green-200";
@@ -70,9 +74,22 @@ export default function ProductTable() {
     const fetchAllProducts = async () => {
         try {
             setLoading(true);
-            const response = await ApiClient("GET", "api/admin/product/allproducts");
+            const response = await ApiClient("GET", "api/admin/product/allproducts", {
+                page: currentPage,
+                limit: itemsPerPage,
+                search: debouncedSearchTerm,
+                status: statusFilter,
+                category: categoryFilter,
+            });
             if (response.success || response.sucess) {
                 setProducts(response?.allproducts || []);
+                setCategoryOptions(response?.filters?.categories || []);
+                setTotalItems(response?.pagination?.total || 0);
+                setTotalPages(response?.pagination?.totalPages || 1);
+                setSummary({
+                    totalProducts: response?.summary?.totalProducts || 0,
+                    activeProducts: response?.summary?.activeProducts || 0,
+                });
             }
         } catch (error) {
             console.error(error);
@@ -457,7 +474,6 @@ export default function ProductTable() {
             );
 
             if (response.success) {
-                setCategoryData(response.category);
                 showCategoryModal(response.category);
             } else {
                 alert("Failed to fetch category data");
@@ -470,33 +486,14 @@ export default function ProductTable() {
         }
     };
 
-    const showCategoryModal = (categoryData) => {
+    const showCategoryModal = () => {
         // ... (keep the existing showCategoryModal function as is)
         // Modal creation code remains the same
     };
 
-    // Filter products based on search and filters
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = searchTerm === "" ||
-            product.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.parentCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.subCategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.title + " " + product.subtitle)?.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus = statusFilter === "all" || product.status === statusFilter;
-
-        const matchesCategory = categoryFilter === "all" ||
-            product.parentCategory === categoryFilter ||
-            product.subCategory === categoryFilter;
-
-        return matchesSearch && matchesStatus && matchesCategory;
-    });
-
-    // Pagination logic
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const indexOfFirstItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+    const indexOfLastItem = Math.min(currentPage * itemsPerPage, totalItems);
+    const currentItems = products;
 
     const handleNextPage = () => {
         if (currentPage < totalPages) {
@@ -516,8 +513,16 @@ export default function ProductTable() {
     }, [searchTerm, statusFilter, categoryFilter]);
 
     useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm.trim());
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [searchTerm]);
+
+    useEffect(() => {
         fetchAllProducts();
-    }, []);
+    }, [currentPage, itemsPerPage, debouncedSearchTerm, statusFilter, categoryFilter]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
@@ -557,7 +562,7 @@ export default function ProductTable() {
                             </div>
                             <div>
                                 <div className="text-sm text-gray-500">Total Products</div>
-                                <div className="text-2xl font-bold text-gray-800">{products.length}</div>
+                                <div className="text-2xl font-bold text-gray-800">{summary.totalProducts}</div>
                             </div>
                         </div>
                     </div>
@@ -582,7 +587,7 @@ export default function ProductTable() {
                             <div>
                                 <div className="text-sm text-gray-500">Active Products</div>
                                 <div className="text-2xl font-bold text-green-600">
-                                    {products.filter(p => p.status === "active").length}
+                                    {summary.activeProducts}
                                 </div>
                             </div>
                         </div>
@@ -595,7 +600,7 @@ export default function ProductTable() {
                             <div>
                                 <div className="text-sm text-gray-500">Showing</div>
                                 <div className="text-2xl font-bold text-purple-600">
-                                    {currentItems.length} of {filteredProducts.length}
+                                    {currentItems.length} of {totalItems}
                                 </div>
                             </div>
                         </div>
@@ -841,13 +846,13 @@ export default function ProductTable() {
                             </div>
 
                             {/* Pagination */}
-                            {filteredProducts.length > itemsPerPage && (
+                            {totalItems > itemsPerPage && (
                                 <div className="px-6 py-4 border-t border-gray-200">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div className="text-sm text-gray-500">
-                                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
-                                            <span className="font-medium">{Math.min(indexOfLastItem, filteredProducts.length)}</span> of{" "}
-                                            <span className="font-medium">{filteredProducts.length}</span> products
+                                            Showing <span className="font-medium">{indexOfFirstItem}</span> to{" "}
+                                            <span className="font-medium">{indexOfLastItem}</span> of{" "}
+                                            <span className="font-medium">{totalItems}</span> products
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
