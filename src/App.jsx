@@ -29,10 +29,11 @@ function AdminLayout() {
     <div className="flex min-h-screen">
       <Sidebar />
 
-      <div className="flex-1 p-6 bg-gray-100">
+      <div className="flex-1 bg-gray-100 p-4 pt-20 lg:p-6 lg:pt-6">
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin-access" element={<ResetPassword />} />
           <Route path="/parent-category" element={<ParentCategoryui />} />
           <Route path="/products" element={<ProductTable />} />
           <Route path="/products/add" element={<AddProduct />} />

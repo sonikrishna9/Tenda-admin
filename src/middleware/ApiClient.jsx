@@ -1,4 +1,5 @@
 import axios from "axios";
+import { normalizeMediaUrlsDeep } from "../utils/media";
 
 const baseurl = import.meta.env.VITE_LOCAL_API;
 
@@ -41,7 +42,7 @@ const ApiClient = async (method, url, data = null) => {
       )
     });
 
-    return response.data;
+    return normalizeMediaUrlsDeep(response.data);
 
   } catch (error) {
 

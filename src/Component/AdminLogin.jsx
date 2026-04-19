@@ -26,6 +26,7 @@ export default function AdminLogin() {
       const token = res.data.token;
 
       document.cookie = `adminToken=${token}; path=/; max-age=86400`;
+      localStorage.setItem("adminProfile", JSON.stringify(res.data.admin || null));
 
       toast.success("Login Successful");
 

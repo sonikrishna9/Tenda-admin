@@ -1,8 +1,14 @@
 import axios from "axios";
+import { normalizeMediaUrlsDeep } from "../../utils/media";
 
 const API = axios.create({
   baseURL: `${import.meta.env.VITE_LOCAL_API}api/blog`
 });
+
+API.interceptors.response.use((response) => ({
+  ...response,
+  data: normalizeMediaUrlsDeep(response.data),
+}));
 
 export const getAllBlogs = (params) =>
   API.get("/get-all", { params });

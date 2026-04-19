@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import ApiClient from "../middleware/ApiClient";
 
 const API = import.meta.env.VITE_LOCAL_API + "api/subcategory";
@@ -13,6 +15,16 @@ export default function SubcategoryBannerTable() {
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      [{ color: [] }, { background: [] }],
+      ["link", "clean"],
+    ],
+  };
 
   /* ================= FETCH ALL ================= */
 
@@ -58,8 +70,8 @@ export default function SubcategoryBannerTable() {
       errors.subtitle = "Subtitle must be less than 200 characters";
     }
 
-    if (formData.description?.length > 500) {
-      errors.description = "Description must be less than 500 characters";
+    if (formData.description?.replace(/<[^>]*>/g, "").trim().length > 2000) {
+      errors.description = "Description must be less than 2000 characters";
     }
 
     if (!isEditing) {
@@ -505,24 +517,30 @@ export default function SubcategoryBannerTable() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description
                   </label>
-                  <textarea
-                    placeholder="Enter description (optional)"
-                    value={form.description}
-                    onChange={e => {
-                      setForm({ ...form, description: e.target.value });
-                      if (formErrors.description) {
-                        setFormErrors(prev => {
-                          const { description, ...rest } = prev;
-                          return rest;
-                        });
-                      }
-                    }}
-                    rows="3"
-                    className="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all resize-none"
-                  />
+                  <div className="overflow-hidden rounded-xl border border-gray-300 bg-white">
+                    <ReactQuill
+                      theme="snow"
+                      value={form.description || ""}
+                      onChange={(value) => {
+                        setForm({ ...form, description: value });
+                        if (formErrors.description) {
+                          setFormErrors((prev) => {
+                            const { description, ...rest } = prev;
+                            return rest;
+                          });
+                        }
+                      }}
+                      modules={quillModules}
+                      placeholder="Enter description (optional)"
+                      className="min-h-[220px]"
+                    />
+                  </div>
                   {formErrors.description && (
                     <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>
                   )}
+                  <p className="text-gray-400 text-xs mt-1">
+                    {(form.description || "").replace(/<[^>]*>/g, "").length}/2000 characters
+                  </p>
                 </div>
 
                 {/* Image Field */}

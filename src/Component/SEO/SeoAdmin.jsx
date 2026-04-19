@@ -1,177 +1,389 @@
-"use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ApiClient from "../../middleware/ApiClient";
-import { 
-  FiSearch, 
-  FiPlus, 
-  FiEdit2, 
-  FiTrash2, 
-  FiSave, 
-  FiX,
-  FiGlobe,
-  FiFileText,
+import {
   FiAlertCircle,
   FiCheckCircle,
-  FiLoader
+  FiEdit2,
+  FiFileText,
+  FiGlobe,
+  FiLoader,
+  FiPlus,
+  FiSave,
+  FiSearch,
+  FiTrash2,
+  FiX,
 } from "react-icons/fi";
 
-const SeoAdmin = () => {
-  const [form, setForm] = useState({
-    slug: "home",
-    metaTitle: "",
-    metaDescription: "",
-  });
+const PRODUCTS_PAGE_VALUE = "__products__";
+const SINGLE_PRODUCT_PAGE_VALUE = "__single_product__";
 
+const STATIC_PAGE_OPTIONS = [
+  { value: "home", label: "Home Page" },
+  { value: "contactus", label: "Contact Us" },
+  { value: "about", label: "About Page" },
+  { value: "partner-program", label: "Partner Program" },
+  { value: "si-partner", label: "SI Partner" },
+  { value: "dealer", label: "Dealer/Distributor" },
+  { value: "blogs", label: "Blogs Page" },
+  { value: "news", label: "News Page" },
+  { value: "gallery", label: "Gallery Page" },
+  { value: "privacy-policy", label: "Privacy Policy" },
+];
+
+const createDefaultForm = () => ({
+  pageType: "static",
+  slug: "home",
+  entityType: "parentCategory",
+  parentCategory: "",
+  subCategory: "",
+  productTitle: "",
+  metaTitle: "",
+  metaDescription: "",
+});
+
+const slugify = (value = "") =>
+  value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const getComputedSlug = (form) => {
+  if (form.pageType === "singleProduct") {
+    if (!form.parentCategory || !form.productTitle) {
+      return "";
+    }
+
+    return `product/${slugify(form.parentCategory)}/${slugify(form.productTitle)}`;
+  }
+
+  if (form.pageType !== "product") {
+    return form.slug;
+  }
+
+  if (!form.parentCategory) {
+    return "";
+  }
+
+  if (form.entityType === "subCategory") {
+    if (!form.subCategory) {
+      return "";
+    }
+
+    return `products/${slugify(form.parentCategory)}/${slugify(form.subCategory)}`;
+  }
+
+  return `products/${slugify(form.parentCategory)}`;
+};
+
+const getEntryLabel = (item) => {
+  const isSingleProduct =
+    item.pageType === "singleProduct" || item.slug?.startsWith("product/");
+  const isProduct =
+    item.pageType === "product" || item.slug?.startsWith("products/");
+
+  if (isSingleProduct) {
+    if (item.parentCategory && item.productTitle) {
+      return `Single Product Page / ${item.parentCategory} / ${item.productTitle}`;
+    }
+  }
+
+  if (isProduct) {
+    if ((item.entityType === "subCategory" || item.subCategory) && item.parentCategory) {
+      return `Product Page / ${item.parentCategory} / ${item.subCategory}`;
+    }
+
+    if (item.parentCategory) {
+      return `Product Page / ${item.parentCategory}`;
+    }
+  }
+
+  return (
+    STATIC_PAGE_OPTIONS.find((option) => option.value === item.slug)?.label ||
+    item.pageLabel ||
+    item.slug
+  );
+};
+
+const SeoAdmin = () => {
+  const [form, setForm] = useState(createDefaultForm);
   const [seoList, setSeoList] = useState([]);
+  const [parentCategories, setParentCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [productSearch, setProductSearch] = useState("");
   const [editId, setEditId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
-  const [notification, setNotification] = useState({ show: false, type: "", message: "" });
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "",
+    message: "",
+  });
   const [loading, setLoading] = useState(false);
+  const notificationTimerRef = useRef(null);
 
-  // Show notification
+  const selectedParentCategory = useMemo(
+    () =>
+      parentCategories.find(
+        (item) => item.categoryname === form.parentCategory
+      ),
+    [form.parentCategory, parentCategories]
+  );
+
+  const availableSubcategories = selectedParentCategory?.subcategories || [];
+  const filteredProducts = useMemo(() => {
+    const selectedParentProducts = products.filter(
+      (item) => item.parentCategory === form.parentCategory
+    );
+    const term = productSearch.trim().toLowerCase();
+
+    if (!term) {
+      return selectedParentProducts;
+    }
+
+    return selectedParentProducts.filter((item) =>
+      [item.title, item.subCategory, item.parentCategory]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term)
+    );
+  }, [form.parentCategory, productSearch, products]);
+  const computedSlug = getComputedSlug(form);
+
   const showNotification = (type, message) => {
     setNotification({ show: true, type, message });
-    setTimeout(() => setNotification({ show: false, type: "", message: "" }), 3000);
+    window.clearTimeout(notificationTimerRef.current);
+    notificationTimerRef.current = window.setTimeout(() => {
+      setNotification({ show: false, type: "", message: "" });
+    }, 3000);
   };
 
-  // 🔹 GET ALL
+  const resetForm = () => {
+    setForm(createDefaultForm());
+    setProductSearch("");
+    setEditId(null);
+    setIsFormVisible(false);
+  };
+
   const fetchSEO = async () => {
     try {
       const res = await ApiClient("GET", "api/admin/meta/seo");
       setSeoList(res.data || []);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       showNotification("error", "Failed to fetch SEO data");
+    }
+  };
+
+  const fetchParentCategories = async () => {
+    try {
+      const res = await ApiClient("GET", "api/admin/parentcategory/getall");
+      setParentCategories(res.parentcategory || []);
+    } catch (error) {
+      console.error(error);
+      showNotification("error", "Failed to fetch product categories");
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const res = await ApiClient("GET", "api/admin/product/allproducts");
+      setProducts(res.allproducts || []);
+    } catch (error) {
+      console.error(error);
+      showNotification("error", "Failed to fetch products");
     }
   };
 
   useEffect(() => {
     fetchSEO();
+    fetchParentCategories();
+    fetchProducts();
+
+    return () => {
+      window.clearTimeout(notificationTimerRef.current);
+    };
   }, []);
 
-  // 🔹 CREATE / UPDATE
+  const handlePageChange = (value) => {
+    if (value === PRODUCTS_PAGE_VALUE) {
+      setForm((prev) => ({
+        ...prev,
+        pageType: "product",
+        slug: "",
+        entityType: "parentCategory",
+        parentCategory: "",
+        subCategory: "",
+        productTitle: "",
+      }));
+      setProductSearch("");
+      return;
+    }
+
+    if (value === SINGLE_PRODUCT_PAGE_VALUE) {
+      setForm((prev) => ({
+        ...prev,
+        pageType: "singleProduct",
+        slug: "",
+        entityType: "productDetail",
+        parentCategory: "",
+        subCategory: "",
+        productTitle: "",
+      }));
+      setProductSearch("");
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      pageType: "static",
+      slug: value,
+      entityType: "parentCategory",
+      parentCategory: "",
+      subCategory: "",
+      productTitle: "",
+    }));
+    setProductSearch("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const payload = {
+        ...form,
+        slug: computedSlug || form.slug,
+      };
+
       if (editId) {
-        await ApiClient("PUT", `api/admin/meta/seo/${editId}`, form);
-        showNotification("success", "SEO updated successfully!");
+        await ApiClient("PUT", `api/admin/meta/seo/${editId}`, payload);
+        showNotification("success", "SEO updated successfully");
       } else {
-        await ApiClient("POST", "api/admin/meta/seo", form);
-        showNotification("success", "SEO created successfully!");
+        await ApiClient("POST", "api/admin/meta/seo", payload);
+        showNotification("success", "SEO created successfully");
       }
 
-      setForm({
-        slug: "home",
-        metaTitle: "",
-        metaDescription: "",
-      });
-      setEditId(null);
-      setIsFormVisible(false);
+      resetForm();
       fetchSEO();
-    } catch (err) {
-      console.error(err);
-      showNotification("error", "Operation failed. Please try again.");
+    } catch (error) {
+      console.error(error);
+      showNotification(
+        "error",
+        error?.response?.data?.message || "Operation failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 EDIT
   const handleEdit = (item) => {
+    const isProduct = item.pageType === "product" || item.slug?.startsWith("products/");
+    const isSingleProduct =
+      item.pageType === "singleProduct" || item.slug?.startsWith("product/");
+
     setForm({
-      slug: item.slug,
-      metaTitle: item.metaTitle,
-      metaDescription: item.metaDescription,
+      pageType: isSingleProduct ? "singleProduct" : isProduct ? "product" : "static",
+      slug: isProduct || isSingleProduct ? "" : item.slug,
+      entityType:
+        isSingleProduct
+          ? "productDetail"
+          : isProduct && (item.entityType === "subCategory" || item.subCategory)
+            ? "subCategory"
+            : "parentCategory",
+      parentCategory: item.parentCategory || "",
+      subCategory: item.subCategory || "",
+      productTitle: item.productTitle || "",
+      metaTitle: item.metaTitle || "",
+      metaDescription: item.metaDescription || "",
     });
+    setProductSearch(item.productTitle || "");
     setEditId(item._id);
     setIsFormVisible(true);
   };
 
-  // 🔹 DELETE
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this SEO entry?")) {
-      try {
-        await ApiClient("DELETE", `api/admin/meta/seo/${id}`);
-        showNotification("success", "SEO deleted successfully!");
-        fetchSEO();
-      } catch (err) {
-        console.error(err);
-        showNotification("error", "Failed to delete SEO");
-      }
+    if (!window.confirm("Are you sure you want to delete this SEO entry?")) {
+      return;
+    }
+
+    try {
+      await ApiClient("DELETE", `api/admin/meta/seo/${id}`);
+      showNotification("success", "SEO deleted successfully");
+      fetchSEO();
+    } catch (error) {
+      console.error(error);
+      showNotification("error", "Failed to delete SEO");
     }
   };
 
-  // 🔹 Cancel Edit
   const handleCancel = () => {
-    setForm({
-      slug: "home",
-      metaTitle: "",
-      metaDescription: "",
-    });
-    setEditId(null);
-    setIsFormVisible(false);
+    resetForm();
   };
 
-  // Filtered SEO list based on search
-  const filteredSeoList = seoList.filter(item =>
-    item.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.metaTitle.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSeoList = seoList.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    const haystack = [
+      item.slug,
+      item.pageLabel,
+      item.metaTitle,
+      item.metaDescription,
+      item.parentCategory,
+      item.subCategory,
+      item.productTitle,
+      getEntryLabel(item),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-  // Slug display names mapping
-  const slugNames = {
-    home: "Home Page",
-    contactus: "Contact Us",
-    about: "About Page",
-    "partner-program": "Partner Program",
-    "partner-program/si-partner": "SI Partner",
-    "partner-program/dealer": "Dealer/Distributor",
-    blogs: "Blogs Page",
-    news: "News Page",
-    gallery: "Gallery Page",
-    "privacy-policy": "Privacy Policy",
-  };
+    return haystack.includes(term);
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-8">
-      {/* Notification */}
       {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slide-in ${
-          notification.type === "success" ? "bg-green-500" : "bg-red-500"
-        } text-white`}>
-          {notification.type === "success" ? <FiCheckCircle size={20} /> : <FiAlertCircle size={20} />}
+        <div
+          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg animate-slide-in ${
+            notification.type === "success" ? "bg-green-500" : "bg-red-500"
+          } text-white`}
+        >
+          {notification.type === "success" ? (
+            <FiCheckCircle size={20} />
+          ) : (
+            <FiAlertCircle size={20} />
+          )}
           <span>{notification.message}</span>
         </div>
       )}
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent">
             SEO Management
           </h1>
-          <p className="text-gray-600 mt-2">Manage meta tags for better search engine visibility</p>
+          <p className="text-gray-600 mt-2">
+            Manage meta tags for better search engine visibility
+          </p>
         </div>
 
-        {/* Action Bar */}
         <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
-          {/* Search */}
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <FiSearch
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
             <input
               type="text"
-              placeholder="Search by slug or title..."
+              placeholder="Search by page, slug, title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
             />
           </div>
 
-          {/* Add Button */}
           {!isFormVisible && (
             <button
               onClick={() => setIsFormVisible(true)}
@@ -183,7 +395,6 @@ const SeoAdmin = () => {
           )}
         </div>
 
-        {/* Form Card */}
         {isFormVisible && (
           <div className="bg-white rounded-xl shadow-lg mb-8 overflow-hidden transition-all duration-300 border border-orange-100">
             <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4 flex justify-between items-center">
@@ -197,30 +408,214 @@ const SeoAdmin = () => {
                 <FiX size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Page Slug *
+                  Page *
                 </label>
                 <select
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                  value={
+                    form.pageType === "product"
+                      ? PRODUCTS_PAGE_VALUE
+                      : form.pageType === "singleProduct"
+                        ? SINGLE_PRODUCT_PAGE_VALUE
+                        : form.slug
+                  }
+                  onChange={(e) => handlePageChange(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
                   required
                 >
-                  <option value="home">🏠 Home Page</option>
-                  <option value="contactus">📞 Contact Us</option>
-                  <option value="about">ℹ️ About Page</option>
-                  <option value="partner-program">🤝 Partner Program</option>
-                  <option value="si-partner">💼 SI Partner</option>
-                  <option value="dealer">🏪 Dealer/Distributor</option>
-                  <option value="blogs">📝 Blogs Page</option>
-                  <option value="news">📰 News Page</option>
-                  <option value="gallery">🖼️ Gallery Page</option>
-                  <option value="privacy-policy">🔒 Privacy Policy</option>
+                  {STATIC_PAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  <option value={PRODUCTS_PAGE_VALUE}>Product Page</option>
+                  <option value={SINGLE_PRODUCT_PAGE_VALUE}>Single Product Page</option>
                 </select>
               </div>
+
+              {form.pageType === "product" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        SEO For *
+                      </label>
+                      <select
+                        value={form.entityType}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            entityType: e.target.value,
+                            subCategory: "",
+                          }))
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
+                        required
+                      >
+                        <option value="parentCategory">Parent Category</option>
+                        <option value="subCategory">Subcategory</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Parent Category *
+                      </label>
+                      <select
+                        value={form.parentCategory}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            parentCategory: e.target.value,
+                            subCategory: "",
+                          }))
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
+                        required
+                      >
+                        <option value="">Select parent category</option>
+                        {parentCategories.map((item) => (
+                          <option key={item._id} value={item.categoryname}>
+                            {item.categoryname}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {form.entityType === "subCategory" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Subcategory *
+                      </label>
+                      <select
+                        value={form.subCategory}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            subCategory: e.target.value,
+                          }))
+                        }
+                        disabled={!form.parentCategory}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                        required
+                      >
+                        <option value="">Select subcategory</option>
+                        {availableSubcategories.map((item, index) => (
+                          <option
+                            key={item._id || `${item.name}-${index}`}
+                            value={item.name}
+                          >
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                      {form.parentCategory && !availableSubcategories.length && (
+                        <p className="text-xs text-red-500 mt-2">
+                          No subcategories available inside this parent category.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-orange-100 bg-orange-50 px-4 py-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Generated SEO slug
+                    </p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      {computedSlug || "Select category options to generate slug"}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {form.pageType === "singleProduct" && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Parent Category *
+                      </label>
+                      <select
+                        value={form.parentCategory}
+                        onChange={(e) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            parentCategory: e.target.value,
+                            productTitle: "",
+                          }));
+                          setProductSearch("");
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
+                        required
+                      >
+                        <option value="">Select parent category</option>
+                        {parentCategories.map((item) => (
+                          <option key={item._id} value={item.categoryname}>
+                            {item.categoryname}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Search Product
+                      </label>
+                      <input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Search product by title..."
+                        disabled={!form.parentCategory}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product *
+                    </label>
+                    <select
+                      value={form.productTitle}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          productTitle: e.target.value,
+                        }))
+                      }
+                      disabled={!form.parentCategory}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                      required
+                    >
+                      <option value="">Select product</option>
+                      {filteredProducts.map((item) => (
+                        <option key={item._id} value={item.title}>
+                          {item.title}{item.subCategory ? ` (${item.subCategory})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {form.parentCategory && !filteredProducts.length && (
+                      <p className="text-xs text-red-500 mt-2">
+                        No products found for this parent category.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-orange-100 bg-orange-50 px-4 py-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Generated SEO slug
+                    </p>
+                    <p className="text-sm text-orange-700 mt-1">
+                      {computedSlug || "Select parent category and product to generate slug"}
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -230,7 +625,9 @@ const SeoAdmin = () => {
                   type="text"
                   placeholder="Enter meta title (50-60 characters recommended)"
                   value={form.metaTitle}
-                  onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, metaTitle: e.target.value }))
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition bg-white"
                   required
                 />
@@ -246,7 +643,12 @@ const SeoAdmin = () => {
                 <textarea
                   placeholder="Enter meta description (150-160 characters recommended)"
                   value={form.metaDescription}
-                  onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      metaDescription: e.target.value,
+                    }))
+                  }
                   rows="4"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition resize-none bg-white"
                   required
@@ -286,16 +688,23 @@ const SeoAdmin = () => {
           </div>
         )}
 
-        {/* Table */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-orange-100">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Page</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Meta Title</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Meta Description</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    Page
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    Meta Title
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    Meta Description
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -314,13 +723,19 @@ const SeoAdmin = () => {
                   </tr>
                 ) : (
                   filteredSeoList.map((item) => (
-                    <tr key={item._id} className="hover:bg-orange-50 transition duration-150">
+                    <tr
+                      key={item._id}
+                      className="hover:bg-orange-50 transition duration-150"
+                    >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <FiFileText size={16} className="text-orange-500" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {slugNames[item.slug] || item.slug}
-                          </span>
+                        <div className="flex items-start gap-2">
+                          <FiFileText size={16} className="text-orange-500 mt-1" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {getEntryLabel(item)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{item.slug}</p>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -362,7 +777,6 @@ const SeoAdmin = () => {
             </table>
           </div>
 
-          {/* Table Footer */}
           {filteredSeoList.length > 0 && (
             <div className="px-6 py-3 bg-orange-50 border-t border-orange-200">
               <p className="text-sm text-gray-600">
@@ -373,7 +787,6 @@ const SeoAdmin = () => {
         </div>
       </div>
 
-      {/* Custom CSS for animations */}
       <style jsx>{`
         @keyframes slideIn {
           from {
@@ -385,9 +798,11 @@ const SeoAdmin = () => {
             opacity: 1;
           }
         }
+
         .animate-slide-in {
           animation: slideIn 0.3s ease-out;
         }
+
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
